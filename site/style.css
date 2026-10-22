@@ -108,8 +108,29 @@ section { scroll-margin-top: 80px; }
 .steps.three li { padding: 78px 22px 24px; }
 .steps.three li > b { top: 22px; }
 
+/* --- Adelanto en la portada --- */
+.teaser {
+  display: flex; align-items: center; gap: 22px; margin: 26px 0 0; padding: 16px 22px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); text-decoration: none; color: var(--text); transition: transform .15s;
+}
+.teaser:hover { transform: translateY(-2px); }
+.teaser-thumbs { display: flex; flex: none; }
+.teaser-thumbs img { width: 120px; border-radius: 10px; border: 3px solid #fff; box-shadow: var(--shadow); }
+.teaser-thumbs img + img { margin-left: -36px; }
+.teaser-thumbs img:nth-child(1) { transform: rotate(-4deg); }
+.teaser-thumbs img:nth-child(3) { transform: rotate(4deg); }
+.teaser-text { display: grid; gap: 2px; }
+.teaser-text b { font-size: 21px; font-weight: 900; color: var(--accent-dark); }
+.teaser-text > span { color: var(--soft); }
+
+.back { margin: 26px 0 0; }
+.back a:not(.btn) { text-decoration: none; font-weight: 800; }
+.back.center { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin: 36px 0 50px; }
+.top-links a[aria-current] { color: var(--accent-dark); }
+
 /* --- Los minijuegos --- */
-.games { padding: 40px 0 0; scroll-margin-top: 80px; }
+.games { padding: 20px 0 0; scroll-margin-top: 80px; }
 .games > h2 { font-size: 32px; text-align: center; }
 .games-sub { text-align: center; color: var(--soft); margin: 8px auto 26px; max-width: 620px; }
 .games-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
@@ -231,4 +252,6 @@ footer .dots { justify-content: center; }
   .steps li > b { left: 18px; }
   .btn { width: 100%; justify-content: center; }
   .share { flex-direction: column; text-align: center; }
+  .teaser { flex-direction: column; text-align: center; padding: 18px; }
+  .teaser-thumbs img { width: 96px; }
 }

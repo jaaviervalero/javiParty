@@ -20,12 +20,13 @@ langBtn.addEventListener("click", () => setLang(html.lang === "es" ? "en" : "es"
 // En un móvil, recordar que el juego va en la tele o el PC (el móvil es el mando).
 const ua = navigator.userAgent;
 const isPhone = /iPhone|iPod|Android.*Mobile/i.test(ua) || (/Android/i.test(ua) && !/TV|AFT|BRAVIA|SMART-TV/i.test(ua) && screen.width < 900);
-if (isPhone) document.getElementById("mobileNote").classList.remove("hidden");
+const byId = (id) => document.getElementById(id);  // algunas piezas solo están en la portada
+if (isPhone && byId("mobileNote")) byId("mobileNote").classList.remove("hidden");
 
 // Botón "añadir el mando" de DSU Controller: solo tiene sentido abierto en el móvil.
-if (!isPhone) document.getElementById("dsuLink").classList.add("hidden");
+if (!isPhone && byId("dsuLink")) byId("dsuLink").classList.add("hidden");
 
-if (DOWNLOADER_CODE) {
+if (DOWNLOADER_CODE && byId("dlCode")) {
   document.getElementById("dlCodeValue").textContent = DOWNLOADER_CODE;
   document.getElementById("dlCode").classList.remove("hidden");
 }
