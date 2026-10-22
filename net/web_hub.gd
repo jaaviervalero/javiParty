@@ -14,6 +14,9 @@ signal controller_disconnected(ctrl)
 signal controller_updated(ctrl)
 
 const WebLanServer := preload("res://net/web_lan_server.gd")
+const WebRtcBridge := preload("res://net/web_rtc_bridge.gd")
+## Página del mando en GitHub Pages; la sala va detrás del "#".
+const PAGES_BASE := "https://jaaviervalero.github.io/javiParty/m/#"
 const PROTOCOL_VERSION := 1
 const TIMEOUT_MSEC := 3000
 const PING_SEC := 1.0
@@ -40,11 +43,20 @@ func _ready() -> void:
 
 ## Lo llama el menú principal (no _ready) para que los tests headless no abran puertos.
 func start() -> bool:
-	if OS.has_feature("HTML5"):
-		return false  # el transporte WebRTC llega en la fase 3
 	if _transport != null:
 		return _transport.is_running()
-	_transport = WebLanServer.new()
+	# En HTML5 no hay LAN: los móviles se conectan por WebRTC (fase 3).
+	var t = WebRtcBridge.new() if OS.has_feature("HTML5") else WebLanServer.new()
+	return start_with(t)
+
+
+## Arranca con un transporte ya creado (los tests le pasan uno falso).
+func start_with(transport) -> bool:
+	if _transport != null:
+		return _transport.is_running()
+	if transport == null:
+		return false
+	_transport = transport
 	_transport.connect("peer_connected", self, "_on_peer_connected")
 	_transport.connect("peer_disconnected", self, "_on_peer_disconnected")
 	_transport.connect("message", self, "_on_message")
@@ -72,10 +84,31 @@ func is_running() -> bool:
 func controller_url() -> String:
 	if not is_running():
 		return ""
+	if OS.has_feature("HTML5"):
+		var r := room()
+		return PAGES_BASE + r if r != "" else ""
 	var ip := LAN.best_private_ipv4(IP.get_local_addresses())
 	if ip == "":
 		return ""
 	return "http://%s:%d" % [ip, _transport.http_port]
+
+
+## Sala de 4 letras del transporte WebRTC; "" con la LAN o sin transporte.
+func room() -> String:
+	if _transport == null:
+		return ""
+	var r = _transport.get("room")
+	return str(r) if r != null else ""
+
+
+## Estado del transporte: el de jpNet en HTML5 ("off", "connecting", "ready",
+## "error:<motivo>" o "waiting-js"), y "ready"/"off" con la LAN.
+func transport_status() -> String:
+	if _transport == null:
+		return "off"
+	if _transport.has_method("status"):
+		return str(_transport.status())
+	return "ready" if _transport.is_running() else "off"
 
 
 func connected_pads() -> Array:

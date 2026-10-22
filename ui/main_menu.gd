@@ -28,14 +28,17 @@ var _web_qr_error: Label
 var _dsu_qr_dialog: Control
 var _dsu_qr_btn: Button
 var _refresh_timer := 0.0
+# En el navegador no hay DSU (UDP) ni IP manual del móvil: esos botones sobran.
+var _html5: bool = OS.has_feature("HTML5")
 
 
 func _ready() -> void:
 	theme = WiiTheme.build()
 	PlayerManager.ui_navigation_enabled = true
-	for ip in Settings.manual_servers:
-		DSUClient.add_server(ip)
-	NetworkScanner.start()
+	if not _html5:
+		for ip in Settings.manual_servers:
+			DSUClient.add_server(ip)
+		NetworkScanner.start()
 	WebHub.start()  # se queda abierto durante las partidas (los móviles siguen conectados)
 	_build()
 	PlayerManager.connect("player_joined", self, "_on_player_event", ["join"])
@@ -100,9 +103,13 @@ func _build() -> void:
 	_scan_btn = _button(buttons, "BTN_SCAN_ON", "_on_toggle_scan")
 	_web_qr_btn = _button(buttons, "BTN_QR", "_open_qr_dialog")
 	_dsu_qr_btn = _button(buttons, "BTN_QR_DSU", "_open_dsu_qr_dialog")
-	_button(buttons, "BTN_MANUAL_IP", "_open_ip_dialog")
+	var manual_ip_btn := _button(buttons, "BTN_MANUAL_IP", "_open_ip_dialog")
 	_lang_btn = _button(buttons, "BTN_LANGUAGE", "_on_language")
 	_button(buttons, "BTN_DEBUG", "toggle_debug_overlay")
+	if _html5:
+		_scan_btn.visible = false
+		_dsu_qr_btn.visible = false
+		manual_ip_btn.visible = false
 
 	_clock = Label.new()
 	_clock.set_anchors_and_margins_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -257,7 +264,7 @@ func _build_qr_dialog() -> void:
 	_web_qr_url.add_color_override("font_color", WiiTheme.ACCENT_DARK)
 	box.add_child(_web_qr_url)
 	_web_qr_steps = Label.new()
-	_web_qr_steps.text = "WEB_QR_STEPS"
+	_web_qr_steps.text = "WEB_QR_STEPS_HTML5" if _html5 else "WEB_QR_STEPS"
 	_web_qr_steps.autowrap = true
 	_web_qr_steps.add_font_override("font", Fonts.get_font(600, 19))
 	_web_qr_steps.add_color_override("font_color", WiiTheme.TEXT_SOFT)
@@ -421,6 +428,9 @@ func _process(delta: float) -> void:
 
 
 func _status_text() -> String:
+	if _html5:
+		# En la web no hay búsqueda DSU: solo el recordatorio del mando web.
+		return tr("SCAN_QR_HINT_WEB")
 	var text := ""
 	if not NetworkScanner.active:
 		text = tr("SCAN_IDLE")

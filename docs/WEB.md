@@ -1,6 +1,6 @@
 # Plan: mando web y versión web de javiParty
 
-Estado: **plan aprobado para escribir, sin empezar**. Rama `web` (worktree
+Estado: **fases 1-3 hechas en la rama `web`** (falta publicar en Pages y probar con móviles reales). Rama `web` (worktree
 `~/Projects/javiParty-web`). Lo que ya funciona está congelado en el tag
 `tv-android-v1` (APK de la tele, mandos DSU) y `pc-godot47` (PC, Godot 4.7).
 
@@ -28,7 +28,7 @@ estar en el mismo Wi-Fi. Queremos:
 | DSU | Se queda en el APK como alternativa; en la web no existe (sin UDP ni hilos). |
 | Mando contextual | Cada minijuego ya declara `controls`; el host se los manda al móvil y este enseña solo esos botones, con su texto ("Embestir", "Moverse"). |
 | Sensores | No hacen falta: ningún minijuego usa acelerómetro ni giroscopio (revisados los 18). |
-| Teclado del portátil | Puede ser un jugador más. |
+| Teclado del portátil | NO es jugador: solo se juega con móviles. |
 | Más adelante | Si gusta: VPS + dominio, y servidor de apretón de manos propio (opción B). |
 
 ## Cómo se conecta un mando
@@ -157,17 +157,21 @@ y un móvil simulado en Python (`tools/web_pad_sim.py`) para probar sin móvil.
 2. Preset "Web", shell HTML propio con pantalla "Pulsa para empezar" (los
    navegadores no dejan sonar nada hasta que el usuario toca) y pantalla
    completa.
-3. Desactivar DSU/escáner en HTML5; el teclado del portátil como jugador.
+3. Desactivar DSU/escáner en HTML5.
 4. Comprobar fuentes, rendimiento (60 fps en un portátil normal) y tamaño de
    descarga (objetivo <25 MB comprimido).
 
-Criterios: los 18 minijuegos se juegan con teclado en Chrome y Firefox.
+Criterios: el juego arranca y va fluido en Chrome y Firefox (se juega con los móviles, fase 3).
 
 ### Fase 3 — Mandos por WebRTC y publicación
 
 1. `web/host/net.js` con Trystero (versión fijada, servida desde el propio
    repo, sin CDN) y varias estrategias de apretón a la vez por si una cae.
-2. `web_rtc_bridge.gd`; sala de 4 letras; QR con `…/m#SALA`.
+   Hecho: Trystero 0.26.0, Nostr + torrent (MQTT descartado: 410 KB),
+   `web/vendor/trystero.js` (77 KB) generado con `tools/build_trystero.sh`.
+2. `web_rtc_bridge.gd`; sala de 4 letras; QR con `…/m/#SALA`. El juego va en
+   `…/javiParty/jugar/` y el mando en `…/javiParty/m/` (`tools/web_export.sh`
+   deja esa estructura en `build/web/`).
 3. GitHub Actions: exportar con `godot3` y publicar en GitHub Pages en cada
    push a `web` (o a mano con `tools/web_publish.sh` si Actions da guerra).
 

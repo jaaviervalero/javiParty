@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html xmlns='http://www.w3.org/1999/xhtml' lang='es' xml:lang='es'>
+<head>
+	<meta charset='utf-8' />
+	<meta name='viewport' content='width=device-width, user-scalable=no, viewport-fit=cover' />
+	<meta name='theme-color' content='#2fa8e0' />
+	<title>$GODOT_PROJECT_NAME</title>
+	<style type='text/css'>
+
+		:root {
+			--sky: #2fa8e0;
+			--sky-dark: #1c86b8;
+			--sky-soft: #eaf6fd;
+			--ink: #33475b;
+			--ink-soft: #6b8299;
+		}
+
+		html, body {
+			height: 100%;
+		}
+
+		body {
+			touch-action: none;
+			margin: 0;
+			border: 0 none;
+			padding: 0;
+			overflow: hidden;
+			text-align: center;
+			color: var(--ink);
+			background-color: var(--sky-soft);
+			background-image: linear-gradient(to bottom, #fbfdff, #e4f4fc 55%, #c9eaf8);
+			font-family: 'Noto Sans', 'Segoe UI', 'Droid Sans', Arial, sans-serif;
+		}
+
+		#canvas {
+			display: block;
+			margin: 0;
+			color: white;
+		}
+
+		#canvas:focus {
+			outline: none;
+		}
+
+		/* Pantallas superpuestas (inicio y carga)
+		 * ====================================== */
+
+		.overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			right: 0;
+			bottom: 0;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			gap: 18px;
+			padding: 24px;
+			box-sizing: border-box;
+			background-color: var(--sky-soft);
+			background-image: linear-gradient(to bottom, #fbfdff, #e4f4fc 55%, #c9eaf8);
+		}
+
+		#status {
+			/* No consume clics: los hijos visibles sí. */
+			pointer-events: none;
+			visibility: hidden;
+		}
+
+		#status > * {
+			pointer-events: auto;
+			visibility: visible;
+		}
+
+		.logo {
+			font-size: 64px;
+			font-weight: 800;
+			line-height: 1;
+			letter-spacing: -1px;
+			color: var(--ink);
+		}
+
+		.logo span {
+			color: var(--ink);
+		}
+
+		.logo b {
+			color: var(--sky);
+		}
+
+		.tagline {
+			margin: 0;
+			font-size: 18px;
+			color: var(--ink-soft);
+		}
+
+		#startBtn {
+			margin-top: 10px;
+			padding: 18px 46px;
+			font: inherit;
+			font-size: 24px;
+			font-weight: 700;
+			color: #ffffff;
+			background-color: var(--sky);
+			border: 0;
+			border-radius: 999px;
+			box-shadow: 0 4px 0 var(--sky-dark), 0 8px 20px rgba(47, 168, 224, 0.35);
+			cursor: pointer;
+			transition: transform 0.08s ease, box-shadow 0.08s ease;
+		}
+
+		#startBtn:hover,
+		#startBtn:focus {
+			background-color: #45b4e8;
+			outline: none;
+			transform: translateY(-1px);
+		}
+
+		#startBtn:active {
+			transform: translateY(2px);
+			box-shadow: 0 2px 0 var(--sky-dark), 0 4px 10px rgba(47, 168, 224, 0.3);
+		}
+
+		.hint {
+			margin: 0;
+			max-width: 560px;
+			font-size: 15px;
+			line-height: 1.4;
+			color: var(--ink-soft);
+		}
+
+		/* Botón pequeño de pantalla completa */
+
+		#fsBtn {
+			position: absolute;
+			right: 14px;
+			top: 14px;  /* abajo tapaba el reloj del menú */
+			z-index: 10;
+			width: 42px;
+			height: 42px;
+			padding: 0;
+			font: inherit;
+			font-size: 20px;
+			line-height: 40px;
+			color: var(--sky-dark);
+			background-color: rgba(255, 255, 255, 0.85);
+			border: 1px solid rgba(47, 168, 224, 0.45);
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		#fsBtn:hover,
+		#fsBtn:focus {
+			background-color: #ffffff;
+			outline: none;
+		}
+
+		/* Barra de carga */
+
+		#status-progress {
+			width: 366px;
+			max-width: 80vw;
+			height: 10px;
+			box-sizing: content-box;
+			background-color: #ffffff;
+			border: 1px solid rgba(47, 168, 224, 0.45);
+			padding: 2px;
+			box-shadow: 0 1px 3px rgba(28, 134, 184, 0.18);
+			border-radius: 7px;
+		}
+
+		#status-progress-inner {
+			height: 100%;
+			width: 0;
+			box-sizing: border-box;
+			transition: width 0.4s linear;
+			background-color: var(--sky);
+			border-radius: 5px;
+		}
+
+		#status-indeterminate {
+			height: 42px;
+			position: relative;
+			width: 42px;
+		}
+
+		#status-indeterminate > div {
+			width: 4.5px;
+			height: 0;
+			border-style: solid;
+			border-width: 9px 3px 0 3px;
+			border-color: rgba(47, 168, 224, 0.35) transparent transparent transparent;
+			transform-origin: center 21px;
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin: -21px 0 0 -5.25px;
+		}
+
+		#status-indeterminate > div:nth-child(1) { transform: rotate( 22.5deg); }
+		#status-indeterminate > div:nth-child(2) { transform: rotate( 67.5deg); }
+		#status-indeterminate > div:nth-child(3) { transform: rotate(112.5deg); }
+		#status-indeterminate > div:nth-child(4) { transform: rotate(157.5deg); }
+		#status-indeterminate > div:nth-child(5) { transform: rotate(202.5deg); }
+		#status-indeterminate > div:nth-child(6) { transform: rotate(247.5deg); }
+		#status-indeterminate > div:nth-child(7) { transform: rotate(292.5deg); }
+		#status-indeterminate > div:nth-child(8) { transform: rotate(337.5deg); }
+
+		#status-notice {
+			margin: 0;
+			max-width: 640px;
+			line-height: 1.4;
+			padding: 10px 14px;
+			color: #8a3b36;
+			background-color: #fdeceb;
+			border: 1px solid #f3c3bf;
+			border-radius: 10px;
+			white-space: pre-line;
+		}
+	</style>
+$GODOT_HEAD_INCLUDE
+</head>
+<body>
+	<canvas id='canvas'>
+		HTML5 canvas appears to be unsupported in the current browser.<br />
+		Please try updating or use a different browser.
+	</canvas>
+
+	<!-- Pantalla de inicio: los navegadores no dejan sonar audio hasta el primer
+	     toque, así que el motor no arranca hasta que el usuario pulsa. -->
+	<div id='start' class='overlay'>
+		<div class='logo'><span>javi</span><b>Party</b></div>
+		<p class='tagline' data-i18n='tagline'>Minijuegos con tu móvil como mando</p>
+		<button id='startBtn' type='button' autofocus data-i18n='start'>Pulsa para empezar</button>
+		<p class='hint' data-i18n='hint'>Se pedirá pantalla completa. Puedes salir con Esc.</p>
+	</div>
+
+	<!-- Carga y avisos -->
+	<div id='status' class='overlay'>
+		<div id='status-progress' style='display: none;' oncontextmenu='event.preventDefault();'><div id='status-progress-inner'></div></div>
+		<div id='status-indeterminate' style='display: none;' oncontextmenu='event.preventDefault();'>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+		</div>
+		<p id='status-text' class='hint' style='display: none;' data-i18n='loading'>Cargando javiParty…</p>
+		<div id='status-notice' style='display: none;'></div>
+	</div>
+
+	<button id='fsBtn' type='button' title='Pantalla completa' aria-label='Pantalla completa'>&#9974;</button>
+
+	<!-- Red del host (WebRTC/Trystero). Es opcional: si no existe, el 404 de
+	     este módulo no impide que el juego arranque. -->
+	<script type='module' src='net.js'></script>
+	<script type='text/javascript' src='$GODOT_URL'></script>
+	<script type='text/javascript'>//<![CDATA[
+
+		const GODOT_CONFIG = $GODOT_CONFIG;
+		var engine = new Engine(GODOT_CONFIG);
+
+		(function() {
+			const INDETERMINATE_STATUS_STEP_MS = 100;
+			const startScreen = document.getElementById('start');
+			const startBtn = document.getElementById('startBtn');
+			const fsBtn = document.getElementById('fsBtn');
+			const statusProgress = document.getElementById('status-progress');
+			const statusProgressInner = document.getElementById('status-progress-inner');
+			const statusIndeterminate = document.getElementById('status-indeterminate');
+			const statusText = document.getElementById('status-text');
+			const statusNotice = document.getElementById('status-notice');
+
+			// Textos: español si el navegador está en español; si no, inglés.
+			const isSpanish = (navigator.language || 'es').toLowerCase().indexOf('es') === 0;
+			const I18N = {
+				es: {
+					start: 'Pulsa para empezar',
+					tagline: 'Minijuegos con tu móvil como mando',
+					hint: 'Se pedirá pantalla completa. Puedes salir con Esc.',
+					loading: 'Cargando javiParty…',
+					fullscreen: 'Pantalla completa',
+					exitFullscreen: 'Salir de pantalla completa',
+				},
+				en: {
+					start: 'Tap to start',
+					tagline: 'Minigames with your phone as a controller',
+					hint: 'Full screen will be requested. Press Esc to leave it.',
+					loading: 'Loading javiParty…',
+					fullscreen: 'Full screen',
+					exitFullscreen: 'Exit full screen',
+				},
+			};
+			const strings = isSpanish ? I18N.es : I18N.en;
+			Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function(elem) {
+				const key = elem.getAttribute('data-i18n');
+				if (strings[key]) elem.textContent = strings[key];
+			});
+			startBtn.setAttribute('aria-label', strings.start);
+			fsBtn.title = strings.fullscreen;
+			fsBtn.setAttribute('aria-label', strings.fullscreen);
+
+			var initializing = true;
+			var started = false;
+			var statusMode = 'hidden';
+
+			var animationCallbacks = [];
+			function animate(time) {
+				animationCallbacks.forEach(callback => callback(time));
+				requestAnimationFrame(animate);
+			}
+			requestAnimationFrame(animate);
+
+			function setStatusMode(mode) {
+				if (statusMode === mode || !initializing)
+					return;
+				[statusProgress, statusIndeterminate, statusText, statusNotice].forEach(elem => {
+					elem.style.display = 'none';
+				});
+				animationCallbacks = animationCallbacks.filter(function(value) {
+					return (value != animateStatusIndeterminate);
+				});
+				switch (mode) {
+					case 'progress':
+						statusProgress.style.display = 'block';
+						break;
+					case 'indeterminate':
+						statusIndeterminate.style.display = 'block';
+						statusText.style.display = 'block';
+						animationCallbacks.push(animateStatusIndeterminate);
+						break;
+					case 'notice':
+						statusNotice.style.display = 'block';
+						break;
+					case 'hidden':
+						break;
+					default:
+						throw new Error('Invalid status mode');
+				}
+				statusMode = mode;
+			}
+
+			function showStatusOverlay(show) {
+				document.getElementById('status').style.visibility = show ? 'visible' : 'hidden';
+			}
+
+			function animateStatusIndeterminate(ms) {
+				var i = Math.floor(ms / INDETERMINATE_STATUS_STEP_MS % 8);
+				if (statusIndeterminate.children[i].style.borderTopColor == '') {
+					Array.prototype.slice.call(statusIndeterminate.children).forEach(child => {
+						child.style.borderTopColor = '';
+					});
+					statusIndeterminate.children[i].style.borderTopColor = '#2fa8e0';
+				}
+			}
+
+			function setStatusNotice(text) {
+				while (statusNotice.lastChild) {
+					statusNotice.removeChild(statusNotice.lastChild);
+				}
+				var lines = text.split('\n');
+				lines.forEach((line, i) => {
+					if (i > 0) statusNotice.appendChild(document.createElement('br'));
+					statusNotice.appendChild(document.createTextNode(line));
+				});
+			}
+
+			function displayFailureNotice(err) {
+				var msg = err && (err.message || err) || 'Error';
+				console.error(msg);
+				document.getElementById('start').style.display = 'none';
+				showStatusOverlay(true);
+				setStatusNotice(msg);
+				setStatusMode('notice');
+				initializing = false;
+			}
+
+			function requestFullscreen() {
+				var elem = document.documentElement;
+				var req = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen;
+				if (!req) return;
+				try {
+					var result = req.call(elem);
+					if (result && result.catch) result.catch(function() {});
+				} catch (e) {
+					// Safari puede lanzar en vez de devolver una promesa.
+				}
+			}
+
+			fsBtn.addEventListener('click', function() {
+				var active = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+				if (active) {
+					var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+					if (exit) {
+						var result = exit.call(document);
+						if (result && result.catch) result.catch(function() {});
+					}
+					fsBtn.title = strings.fullscreen;
+				} else {
+					requestFullscreen();
+					fsBtn.title = strings.exitFullscreen;
+				}
+			});
+
+			function startGame() {
+				if (started) return;
+				started = true;
+				document.getElementById('start').style.display = 'none';
+				showStatusOverlay(true);
+				setStatusMode('indeterminate');
+
+				// Dentro del gesto del usuario: el audio y la pantalla completa
+				// solo se permiten ahí.
+				requestFullscreen();
+
+				if (!Engine.isWebGLAvailable()) {
+					displayFailureNotice('WebGL not available');
+					return;
+				}
+
+				engine.startGame({
+					'onProgress': function (current, total) {
+						if (total > 0) {
+							statusProgressInner.style.width = current/total * 100 + '%';
+							setStatusMode('progress');
+							if (current === total) {
+								// wait for progress bar animation
+								setTimeout(() => {
+									setStatusMode('indeterminate');
+								}, 500);
+							}
+						} else {
+							setStatusMode('indeterminate');
+						}
+					},
+				}).then(() => {
+					setStatusMode('hidden');
+					initializing = false;
+					showStatusOverlay(false);
+				}, displayFailureNotice);
+			}
+
+			startBtn.addEventListener('click', startGame);
+
+			// Solo para pruebas automáticas (chromium --headless): ?autostart=1
+			// arranca el motor sin esperar al clic.
+			if (new URLSearchParams(window.location.search).get('autostart') === '1') {
+				startGame();
+			} else if (!Engine.isWebGLAvailable()) {
+				displayFailureNotice('WebGL not available');
+			}
+		})();
+	//]]></script>
+</body>
+</html>

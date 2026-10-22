@@ -16,6 +16,11 @@ const T = {
     full: "La partida está llena: ya hay 4 jugadores.", player: "Jugador %d",
     unreachable: "No llego al juego. ¿Estás en el mismo Wi-Fi que la tele?",
     ms: "%d ms", noNet: "sin conexión",
+    // Por WebRTC (portátil): el enlace lleva la sala en el hash (#KQZT).
+    laptopHint: "Escribe el código de 4 letras que sale en el portátil.",
+    roomLabel: "Código de la partida", searching: "Buscando la partida…",
+    noHost: "No encuentro la partida. ¿Está abierta en el portátil? Comprueba el código",
+    badRoom: "El código son 4 letras (sin I ni O).",
   },
   en: {
     tapToPlay: "Tap to play", sameWifi: "You need to be on the same Wi-Fi as the TV.",
@@ -23,6 +28,10 @@ const T = {
     full: "The game is full: there are already 4 players.", player: "Player %d",
     unreachable: "Can't reach the game. Are you on the same Wi-Fi as the TV?",
     ms: "%d ms", noNet: "offline",
+    laptopHint: "Enter the 4-letter code shown on the laptop.",
+    roomLabel: "Game code", searching: "Looking for the game…",
+    noHost: "Can't find the game. Is it open on the laptop? Check the code",
+    badRoom: "The code is 4 letters (no I or O).",
   },
 };
 const lang = (navigator.language || "es").slice(0, 2) === "en" ? "en" : "es";
@@ -74,12 +83,36 @@ function sendInput(force) {
 }
 const round2 = (v) => Math.round(v * 100) / 100;
 
-// --- Conexión (WebSocket a la tele/PC; la fase 3 añade WebRTC) ---
+// --- Conexión ---
+// Dos transportes, mismos mensajes del protocolo:
+//  - WebSocket: lo usa la tele/escritorio (página servida por http en la LAN).
+//  - WebRTC: GitHub Pages (https) o cualquier enlace con #SALA; el apretón de
+//    manos va por redes públicas con Trystero y luego el canal es directo.
+const RTC_APP_ID = "javiparty";
+const RTC_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const RTC_HOST_WAIT_MS = 15000;
+const RTC_HOST_GONE_MS = 4000;   // el host manda ping cada segundo
+const RTC_HELLO_MS = 2000;
+
+function normalizeRoom(v) {
+  const s = String(v || "").trim().toUpperCase();
+  if (s.length !== 4) return "";
+  for (const c of s) if (!RTC_ALPHABET.includes(c)) return "";
+  return s;
+}
+const hashRoom = normalizeRoom(location.hash.replace(/^#/, ""));
+let mode = (hashRoom || location.protocol === "https:") ? "rtc" : "ws";
+let roomCode = hashRoom;
+
 let ws = null;
 let connectedOnce = false;
 let attempts = 0;
 let heartbeat = null;
 let wantConnection = false;
+
+// Estado del transporte WebRTC (null si no se está usando).
+let rtc = null;
+let rtcGen = 0;
 
 function wsUrl() {
   const q = new URLSearchParams(location.search);
@@ -88,6 +121,13 @@ function wsUrl() {
 }
 
 function connect() {
+  wantConnection = true;
+  const waiting = mode === "rtc" ? tr("searching") : tr("connecting");
+  showStatus(connectedOnce ? tr("reconnecting") : waiting, false);
+  if (mode === "rtc") connectRtc(); else connectWs();
+}
+
+function connectWs() {
   wantConnection = true;
   showStatus(connectedOnce ? tr("reconnecting") : tr("connecting"), false);
   try {
@@ -125,7 +165,197 @@ function scheduleReconnect() {
 }
 
 function send(msg) {
+  if (mode === "rtc") { rtcSend(msg); return; }
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+// --- WebRTC (Trystero) ---
+function loadTrystero() {
+  // En el despliegue trystero.js se copia junto a esta página; en el repo vive
+  // en web/vendor/ (para poder probar con python -m http.server).
+  return import("./trystero.js").catch(() => import("../vendor/trystero.js"));
+}
+
+function connectRtc() {
+  const code = roomCode || hashRoom ||
+    normalizeRoom($("roomInput") ? $("roomInput").value : "");
+  if (!code) {
+    wantConnection = false;
+    showStatus(tr("badRoom"), true);
+    return;
+  }
+  roomCode = code;
+  stopRtc();
+  const st = { room: code, entries: [], hostId: null, hostName: "", helloTimer: null, waitTimer: null, watchTimer: null, lastHost: 0 };
+  rtc = st;
+  const gen = ++rtcGen;
+  loadTrystero().then((mod) => {
+    if (gen !== rtcGen || rtc !== st || !wantConnection) return;
+    startRtcRooms(mod, st);
+  }).catch(() => {
+    if (gen !== rtcGen || rtc !== st) return;
+    wantConnection = false;
+    stopRtc();
+    showStatus(tr("unreachable"), true);
+  });
+}
+
+function startRtcRooms(mod, st) {
+  // Las dos estrategias a la vez: si una red pública falla, la otra sigue.
+  const strategies = [["nostr", mod.joinNostr], ["torrent", mod.joinTorrent]];
+  for (const [name, join] of strategies) {
+    if (typeof join !== "function") continue;
+    try {
+      const room = join({ appId: RTC_APP_ID }, st.room);
+      const entry = { name: name, room: room, action: null };
+      entry.action = room.makeAction("m", {
+        onMessage: (data, ctx) => rtcMessage(st, name, data, ctx.peerId),
+      });
+      room.onPeerJoin = (id) => {
+        if (rtc !== st) return;
+        rtcHelloTo(entry, id);
+        armHostWait(st);   // hay gente: damos otros 15 s a que conteste el host
+      };
+      room.onPeerLeave = (id) => { if (rtc === st) rtcPeerLeave(st, id); };
+      st.entries.push(entry);
+    } catch (e) { /* esa estrategia no está disponible */ }
+  }
+  if (st.entries.length === 0) {
+    wantConnection = false;
+    stopRtc();
+    showStatus(tr("unreachable"), true);
+    return;
+  }
+  st.helloTimer = setInterval(() => rtcHelloAll(st), RTC_HELLO_MS);
+  // Vigilante: el host manda ping cada segundo. Si se calla, se ha ido (WebRTC
+  // tarda mucho en dar el canal por muerto por su cuenta).
+  st.watchTimer = setInterval(() => {
+    if (rtc !== st || !st.hostId) return;
+    if (Date.now() - st.lastHost > RTC_HOST_GONE_MS) hostLost(st);
+  }, 1000);
+  rtcHelloAll(st);
+  armHostWait(st);
+}
+
+function helloText() { return JSON.stringify({ t: "hello", id: deviceId(), v: 1 }); }
+
+// Mientras no haya host, el hello va a todos: solo el host contesta welcome.
+function rtcHelloTo(entry, id) {
+  const st = rtc;
+  if (!st || st.hostId) return;
+  try { entry.action.send(helloText(), { target: id }).catch(() => {}); } catch (e) {}
+}
+
+function rtcHelloAll(st) {
+  if (rtc !== st || st.hostId || !wantConnection) return;
+  for (const entry of st.entries) {
+    let ids = [];
+    try { ids = Object.keys(entry.room.getPeers()); } catch (e) {}
+    for (const id of ids) rtcHelloTo(entry, id);
+  }
+}
+
+function armHostWait(st) {
+  if (!st) return;
+  clearTimeout(st.waitTimer);
+  st.waitTimer = setTimeout(() => {
+    if (rtc !== st || st.hostId || !wantConnection) return;
+    wantConnection = false;
+    stopHeartbeat();
+    stopRtc();
+    showStatus(tr("noHost"), true);
+  }, RTC_HOST_WAIT_MS);
+}
+
+function rtcMessage(st, name, data, from) {
+  if (rtc !== st) return;
+  let msg;
+  try { msg = JSON.parse(typeof data === "string" ? data : JSON.stringify(data)); } catch (e) { return; }
+  if (!st.hostId) {
+    // Los mandos también se ven entre sí: solo hacemos caso al que dice ser host.
+    if (msg.t !== "welcome" && msg.t !== "full") return;
+    st.hostId = from;
+    st.hostName = name;
+    clearInterval(st.helloTimer); st.helloTimer = null;
+    clearTimeout(st.waitTimer); st.waitTimer = null;
+  } else if (from !== st.hostId) {
+    return;  // ya tenemos host; los demás peers no nos interesan
+  }
+  st.lastHost = Date.now();
+  onMessage(msg);
+}
+
+function rtcSend(msg) {
+  const st = rtc;
+  if (!st || !st.hostId) return;
+  // El mismo peer físico puede estar en las dos estrategias: usa la que aún lo
+  // tenga activo, y si no, la que lo vio primero.
+  let entry = null;
+  for (const e of st.entries) {
+    try {
+      if (e.room.getPeers()[st.hostId]) { entry = e; break; }
+    } catch (err) {}
+  }
+  if (!entry) entry = st.entries.find((e) => e.name === st.hostName);
+  if (!entry) return;
+  try { entry.action.send(JSON.stringify(msg), { target: st.hostId }).catch(() => {}); } catch (e) {}
+}
+
+function hostLost(st) {
+  if (rtc !== st || !st.hostId) return;
+  st.hostId = null;
+  st.hostName = "";
+  stopHeartbeat();
+  setNet(false);
+  if (!wantConnection) return;
+  showStatus(tr("reconnecting"), false);
+  if (!st.helloTimer) st.helloTimer = setInterval(() => rtcHelloAll(st), RTC_HELLO_MS);
+  rtcHelloAll(st);
+  armHostWait(st);
+}
+
+function rtcPeerLeave(st, id) {
+  if (id !== st.hostId) return;
+  // Si solo ha caído una estrategia, el host sigue por la otra: no es un corte.
+  for (const entry of st.entries) {
+    try { if (entry.room.getPeers()[id]) return; } catch (e) {}
+  }
+  hostLost(st);
+}
+
+function stopRtc() {
+  rtcGen++;
+  const st = rtc;
+  rtc = null;
+  if (!st) return;
+  clearInterval(st.helloTimer);
+  clearInterval(st.watchTimer);
+  clearTimeout(st.waitTimer);
+  for (const entry of st.entries) {
+    try {
+      const p = entry.room.leave();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  }
+  st.entries = [];
+}
+
+// --- Pantalla encendida en https (Wake Lock; NoSleep si ya estuviera cargado) ---
+let wakeLock = null;
+let noSleep = null;
+function keepAwake() {
+  if (navigator.wakeLock) {
+    if (wakeLock) return;
+    navigator.wakeLock.request("screen").then((lock) => {
+      wakeLock = lock;
+      lock.addEventListener("release", () => { wakeLock = null; });
+    }).catch(() => {});
+  } else if (window.NoSleep) {
+    try {
+      noSleep = noSleep || new window.NoSleep();
+      noSleep.enable();
+    } catch (e) {}
+  }
 }
 
 function onMessage(msg) {
@@ -135,13 +365,15 @@ function onMessage(msg) {
       setPlayer(msg.player, msg.color);
       showPad();
       setNet(true);
+      keepAwake();
       startHeartbeat();
       sendInput(true);
       break;
     case "full":
       wantConnection = false;
       showStatus(tr("full"), true);
-      if (ws) ws.close();
+      if (mode === "rtc") stopRtc();
+      else if (ws) ws.close();
       break;
     case "layout":
       applyLayout(msg.controls || []);
@@ -314,9 +546,15 @@ document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: fal
 
 // Si la pestaña vuelve a primer plano, reconectar enseguida.
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && connectedOnce && (!ws || ws.readyState > 1)) {
-    attempts = 0; wantConnection = true; connect();
-  } else if (document.visibilityState === "hidden") {
+  if (document.visibilityState === "visible") {
+    keepAwake();
+    if (mode === "rtc") {
+      if (wantConnection && (!rtc || rtc.entries.length === 0)) connect();
+      else if (rtc && !rtc.hostId) rtcHelloAll(rtc);
+    } else if (connectedOnce && (!ws || ws.readyState > 1)) {
+      attempts = 0; wantConnection = true; connect();
+    }
+  } else {
     // Al bloquear el móvil, soltar todo para que no se quede un botón pulsado.
     held.clear(); dpadBits = 0; stick = { x: 0, y: 0 }; resetKnob(); paintDpad(); sendInput(true);
   }
@@ -326,14 +564,47 @@ document.addEventListener("visibilitychange", () => {
 for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = T[lang][el.dataset.i18n];
 document.documentElement.lang = lang;
 
+if (mode === "rtc") {
+  // Sin #SALA en el enlace, se pide el código a mano.
+  $("roomBox").classList.toggle("hidden", !!roomCode);
+  if (roomCode) $("roomInput").value = roomCode;
+  $("startHint").textContent = T[lang].laptopHint;
+} else {
+  $("roomBox").classList.add("hidden");
+}
+
 $("startBtn").addEventListener("click", () => {
-  // El primer toque permite vibrar y pantalla completa (Android; el iPhone no la da).
+  if (mode === "rtc") {
+    const typed = normalizeRoom($("roomInput").value);
+    if (typed) {
+      roomCode = typed;
+      if (normalizeRoom(location.hash.replace(/^#/, "")) !== typed) {
+        try { history.replaceState(null, "", "#" + typed); } catch (e) {}
+      }
+    } else if (!roomCode) {
+      $("startHint").textContent = T[lang].badRoom;
+      return;
+    }
+  }
+  // El primer toque permite vibrar, pantalla completa y mantener la pantalla.
   const fs = document.documentElement.requestFullscreen;
   if (fs) fs.call(document.documentElement).catch(() => {});
   buzz(20);
+  keepAwake();
   connect();
 });
 $("retryBtn").addEventListener("click", () => { attempts = 0; connect(); });
+
+// Código a mano: solo letras válidas, y Enter equivale al botón grande.
+const roomInput = $("roomInput");
+roomInput.addEventListener("input", () => {
+  const clean = roomInput.value.toUpperCase()
+    .split("").filter((c) => RTC_ALPHABET.includes(c)).join("").slice(0, 4);
+  if (roomInput.value !== clean) roomInput.value = clean;
+});
+roomInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); $("startBtn").click(); }
+});
 
 // Mando de menús hasta que el juego diga otra cosa.
 applyLayout([["dpad", ""], ["A", ""], ["B", ""]]);

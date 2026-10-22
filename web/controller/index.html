@@ -7,12 +7,29 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>javiParty · Mando</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  /* Campo del código (solo WebRTC sin #SALA en el enlace). Mismo aire que el resto. */
+  .room { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .room label { color: var(--soft); font-size: 15px; }
+  .room input {
+    width: 200px; padding: 12px 16px; border-radius: 18px; border: 2px solid var(--border);
+    background: var(--panel); color: var(--text); font: inherit; font-size: 30px; font-weight: 900;
+    letter-spacing: 10px; text-align: center; text-transform: uppercase; outline: none;
+    user-select: text; -webkit-user-select: text;
+  }
+  .room input:focus { border-color: var(--accent); }
+</style>
 </head>
 <body>
 <!-- Pantalla de inicio: el primer toque desbloquea vibración y pantalla completa. -->
 <section id="start" class="screen">
   <h1 class="logo"><span>javi</span><b>Party</b></h1>
   <p class="dots"><i></i><i></i><i></i><i></i></p>
+  <div id="roomBox" class="room hidden">
+    <label for="roomInput" data-i18n="roomLabel">Código de la partida</label>
+    <input id="roomInput" type="text" maxlength="4" autocomplete="off" autocapitalize="characters"
+           spellcheck="false" enterkeyhint="go" placeholder="KQZT">
+  </div>
   <button id="startBtn" class="big" data-i18n="tapToPlay">Toca para jugar</button>
   <p id="startHint" class="hint" data-i18n="sameWifi">Tienes que estar en el mismo Wi-Fi que la tele.</p>
 </section>
