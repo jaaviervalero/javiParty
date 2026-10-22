@@ -30,6 +30,12 @@ const GAMES := [
 		"title": {"es": "Rey de la colina", "en": "King of the hill"}},
 	{"id": "pesca", "scene": "res://minigames/pesca/pesca.tscn",
 		"title": {"es": "A pescar", "en": "Gone fishing"}},
+	{"id": "duelo", "scene": "res://minigames/duelo/duelo.tscn",
+		"title": {"es": "Duelo al sol", "en": "Showdown"}},
+	{"id": "cronometro", "scene": "res://minigames/cronometro/cronometro.tscn",
+		"title": {"es": "Para el reloj", "en": "Stop the clock"}},
+	{"id": "globos", "scene": "res://minigames/globos/globos.tscn",
+		"title": {"es": "Infla el globo", "en": "Pump it up"}},
 ]
 
 

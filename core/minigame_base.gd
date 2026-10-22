@@ -101,7 +101,9 @@ func is_playing() -> bool:
 	return state == State.PLAYING and not paused
 
 
-func add_score(p: Player, amount := 1) -> void:
+## Sin tipo a propósito: con `amount := 1` GDScript lo fija a int y truncaría
+## puntuaciones decimales (tiempos, errores...).
+func add_score(p: Player, amount = 1) -> void:
 	scores[p.index] = scores.get(p.index, 0) + amount
 
 
