@@ -552,12 +552,12 @@ func _result_row(r: Dictionary) -> Control:
 
 
 func _big_flash(text: String, color: Color) -> void:
+	# Ocupa toda la pantalla con el texto centrado, y escala desde el centro.
 	var l := _label(text, 140, color, 800)
-	l.set_anchors_preset(Control.PRESET_CENTER)
-	l.size = Vector2(800, 200)
-	l.position = Vector2(240, 260)
-	l.pivot_offset = Vector2(400, 100)
+	l.set_anchors_preset(Control.PRESET_FULL_RECT)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.pivot_offset = get_viewport_rect().size / 2
 	_hud.add_child(l)
 	l.scale = Vector2(1.6, 1.6)
 	var tw := l.create_tween()

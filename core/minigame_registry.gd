@@ -2,6 +2,7 @@ class_name MinigameRegistry
 extends RefCounted
 ## Lista de minijuegos disponibles. Cada entrada: id (carpeta en res://minigames/),
 ## escena y título en los dos idiomas (para el selector, sin tener que cargar la escena).
+## Fuera del catálogo (código conservado): lluvia, carrera.
 
 const GAMES := [
 	{"id": "estrellas", "scene": "res://minigames/estrellas/estrellas.tscn",
@@ -10,14 +11,10 @@ const GAMES := [
 		"title": {"es": "Sumo de bolas", "en": "Ball sumo"}},
 	{"id": "pintura", "scene": "res://minigames/pintura/pintura.tscn",
 		"title": {"es": "Pinta el suelo", "en": "Paint the floor"}},
-	{"id": "lluvia", "scene": "res://minigames/lluvia/lluvia.tscn",
-		"title": {"es": "Lluvia de monedas", "en": "Coin shower"}},
 	{"id": "saltarin", "scene": "res://minigames/saltarin/saltarin.tscn",
 		"title": {"es": "Pajarito saltarín", "en": "Flappy hop"}},
 	{"id": "esquiva", "scene": "res://minigames/esquiva/esquiva.tscn",
 		"title": {"es": "Esquiva", "en": "Dodge!"}},
-	{"id": "carrera", "scene": "res://minigames/carrera/carrera.tscn",
-		"title": {"es": "Carrera de pulgares", "en": "Thumb sprint"}},
 	{"id": "memoria", "scene": "res://minigames/memoria/memoria.tscn",
 		"title": {"es": "Sigue la secuencia", "en": "Follow the sequence"}},
 	{"id": "ritmo", "scene": "res://minigames/ritmo/ritmo.tscn",

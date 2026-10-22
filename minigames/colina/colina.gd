@@ -13,6 +13,8 @@ const LUNGE_COOLDOWN := 1.0
 const ZONE_RADIUS := 110.0
 const ZONE_PERIOD := 8.0
 const ZONE_WARN := 1.5
+const ZONE_EDGE_MARGIN := 12.0  # distancia mínima de la zona al borde de la arena
+const ZONE_MIN_JUMP := 380.0     # la zona nueva aparece al menos así de lejos
 const TICK := 0.5
 
 
@@ -70,10 +72,18 @@ func _game_process(delta: float) -> void:
 	_update_effects(delta)
 
 
+## Siguiente zona: en cualquier parte (también pegada a bordes y esquinas) y lejos
+## de la actual, para que haya que cruzar la arena. Se prueban varios candidatos y
+## se queda el primero suficientemente lejano.
 func _random_zone_pos() -> Vector2:
-	var lo := ARENA.position + Vector2(ZONE_RADIUS + 40.0, ZONE_RADIUS + 40.0)
-	var hi := ARENA.end - Vector2(ZONE_RADIUS + 40.0, ZONE_RADIUS + 40.0)
-	return Vector2(randf_range(lo.x, hi.x), randf_range(lo.y, hi.y))
+	var lo := ARENA.position + Vector2(ZONE_RADIUS + ZONE_EDGE_MARGIN, ZONE_RADIUS + ZONE_EDGE_MARGIN)
+	var hi := ARENA.end - Vector2(ZONE_RADIUS + ZONE_EDGE_MARGIN, ZONE_RADIUS + ZONE_EDGE_MARGIN)
+	var best := Vector2(randf_range(lo.x, hi.x), randf_range(lo.y, hi.y))
+	for i in 16:
+		if best.distance_to(_zone_pos) >= ZONE_MIN_JUMP:
+			break
+		best = Vector2(randf_range(lo.x, hi.x), randf_range(lo.y, hi.y))
+	return best
 
 
 func _update_zone(delta: float) -> void:
