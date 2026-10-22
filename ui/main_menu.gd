@@ -3,7 +3,8 @@ extends Control
 ## mientras la búsqueda está activa. Todo se maneja con el foco de Godot, así que
 ## vale el mando de la tele, el teclado o el D-pad de cualquier móvil.
 
-const TEST_SCENE := "res://minigames/test_ball/test_ball.tscn"
+const SELECT_SCENE := "res://ui/minigame_select.tscn"
+const QR_TEXTURE := "res://assets/controller/javiparty_qr.png"
 
 var _cards: Array[PlayerCard] = []
 var _status: Label
@@ -14,6 +15,8 @@ var _first_btn: Button
 var _ip_dialog: Control
 var _ip_edit: LineEdit
 var _ip_error: Label
+var _qr_dialog: Control
+var _qr_btn: Button
 var _refresh_timer := 0.0
 
 
@@ -78,10 +81,11 @@ func _build() -> void:
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 14)
+	buttons.add_theme_constant_override("separation", 10)
 	root.add_child(buttons)
-	_first_btn = _button(buttons, "BTN_PLAY_TEST", _on_play_test)
+	_first_btn = _button(buttons, "BTN_PLAY", _on_play)
 	_scan_btn = _button(buttons, "BTN_SCAN_ON", _on_toggle_scan)
+	_qr_btn = _button(buttons, "BTN_QR", _open_qr_dialog)
 	_button(buttons, "BTN_MANUAL_IP", _open_ip_dialog)
 	_lang_btn = _button(buttons, "BTN_LANGUAGE", _on_language)
 	_button(buttons, "BTN_DEBUG", DebugOverlay.toggle)
@@ -97,6 +101,7 @@ func _build() -> void:
 	add_child(_clock)
 
 	_build_ip_dialog()
+	_build_qr_dialog()
 
 
 func _title_label(text: String, color: Color) -> Label:
@@ -112,6 +117,7 @@ func _title_label(text: String, color: Color) -> Label:
 func _button(parent: Node, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
+	b.add_theme_font_size_override("font_size", 19)
 	b.pressed.connect(func(): Sfx.play("accept"); cb.call())
 	b.focus_entered.connect(Sfx.play.bind("move"))
 	parent.add_child(b)
@@ -165,6 +171,61 @@ func _build_ip_dialog() -> void:
 	_button(row, "BTN_CONNECT", _on_connect_ip)
 
 
+## Diálogo con el QR del mando de javiParty para escanearlo con DSU Controller.
+func _build_qr_dialog() -> void:
+	_qr_dialog = Control.new()
+	_qr_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_qr_dialog.visible = false
+	add_child(_qr_dialog)
+	var dim := ColorRect.new()
+	dim.color = Color(0.85, 0.9, 0.94, 0.7)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_qr_dialog.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_qr_dialog.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 28)
+	panel.add_child(row)
+	var qr := TextureRect.new()
+	qr.texture = load(QR_TEXTURE)
+	qr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # QR nítido al escalar
+	qr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	qr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	qr.custom_minimum_size = Vector2(400, 400)
+	row.add_child(qr)
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.custom_minimum_size = Vector2(380, 0)
+	box.add_theme_constant_override("separation", 16)
+	row.add_child(box)
+	var title := Label.new()
+	title.text = "QR_TITLE"
+	title.add_theme_font_size_override("font_size", 32)
+	box.add_child(title)
+	var steps := Label.new()
+	steps.text = "QR_STEPS"
+	steps.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	steps.add_theme_font_size_override("font_size", 19)
+	steps.add_theme_color_override("font_color", WiiTheme.TEXT_SOFT)
+	box.add_child(steps)
+	var close_row := HBoxContainer.new()
+	box.add_child(close_row)
+	_qr_dialog.set_meta("close", _button(close_row, "BTN_CLOSE", _close_qr_dialog))
+
+
+func _open_qr_dialog() -> void:
+	_qr_dialog.visible = true
+	(_qr_dialog.get_meta("close") as Button).grab_focus()
+
+
+func _close_qr_dialog() -> void:
+	_qr_dialog.visible = false
+	_qr_btn.grab_focus()
+
+
 func _open_ip_dialog() -> void:
 	_ip_error.text = ""
 	_ip_dialog.visible = true
@@ -192,10 +253,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		Sfx.play("back")
 		_close_ip_dialog()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel") and _qr_dialog.visible:
+		Sfx.play("back")
+		_close_qr_dialog()
+		get_viewport().set_input_as_handled()
 
 
-func _on_play_test() -> void:
-	get_tree().change_scene_to_file(TEST_SCENE)
+func _on_play() -> void:
+	get_tree().change_scene_to_file(SELECT_SCENE)
 
 
 func _on_toggle_scan() -> void:

@@ -1,22 +1,22 @@
-extends Node2D
-## Juego de prueba "tonto" para comprobar el mando, solo con botones (pensado para el
-## mando de javiParty, tools/make_layout.py): stick o cruceta mueven la bola, A da un
-## impulso, B lanza una onda que empuja a los demás y + vuelve al menú.
-## Recoger estrellas suma puntos. Sin motor de físicas: todo a mano y en un _draw.
+extends MinigameBase
+## EJEMPLO DE REFERENCIA para todos los minijuegos (ver docs/MINIJUEGOS.md).
+## "Estrellas": cada jugador es una bola; recoge más estrellas que nadie.
+## Stick o cruceta para moverse, A para un impulso, B para una onda que empuja.
+## Todo se dibuja en _draw (sin nodos por entidad) y toda la lógica va en _game_process.
 
-const MENU_SCENE := "res://ui/main_menu.tscn"
-const ARENA := Rect2(40, 110, 1200, 560)
 const RADIUS := 34.0
-const MAX_SPEED := 420.0      # px/s con la cruceta
-const STEER := 9.0            # lo rápido que la velocidad sigue a la cruceta (1/s)
+const MAX_SPEED := 420.0      # px/s
+const STEER := 9.0            # lo rápido que la velocidad sigue al control (1/s)
 const DASH_SPEED := 750.0
 const DASH_COOLDOWN := 0.6
 const WAVE_COOLDOWN := 1.2
 const WAVE_RADIUS := 260.0
 const WAVE_PUSH := 900.0
-const STAR_COUNT := 3
+const STAR_COUNT := 4
 const STAR_RADIUS := 22.0
 
+
+## Estado de cada jugador: una clase interna simple, sin nodos.
 class Ball:
 	var player: Player
 	var pos: Vector2
@@ -25,64 +25,43 @@ class Ball:
 	var wave_cd := 0.0
 	var squash := 1.0
 
+
 var _balls: Array[Ball] = []
 var _stars: Array[Vector2] = []
 var _star_anim: Array[float] = []
 var _waves: Array = []      # [pos, t, color]
-var _confetti: Array = []   # [pos, vel, color, life]
-var _font: Font
-var _help: Label
-var _empty: Label
+var _confetti: Array = []   # [pos, vel, color, vida]
 var _time := 0.0
 
 
-func _ready() -> void:
-	PlayerManager.ui_navigation_enabled = false
-	_font = WiiTheme.font(800)
-	var ui := CanvasLayer.new()
-	add_child(ui)
-	var bg := WiiBackground.new()
-	ui.layer = -1
-	ui.add_child(bg)
-	var hud := CanvasLayer.new()
-	add_child(hud)
-	_help = Label.new()
-	_help.text = "TEST_HELP"
-	_help.position = Vector2(0, 676)
-	_help.size = Vector2(1280, 30)
-	_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_help.add_theme_font_size_override("font_size", 18)
-	_help.add_theme_color_override("font_color", WiiTheme.TEXT_SOFT)
-	hud.add_child(_help)
-	_empty = Label.new()
-	_empty.text = "TEST_NO_PLAYERS"
-	_empty.position = Vector2(0, 360)
-	_empty.size = Vector2(1280, 40)
-	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_empty.add_theme_font_size_override("font_size", 30)
-	hud.add_child(_empty)
+func _configure() -> void:
+	title = {"es": "Estrellas", "en": "Stars"}
+	instructions = {"es": "Recoge más estrellas que nadie y empuja a los demás.",
+		"en": "Grab more stars than anyone and push the others around."}
+	controls = [
+		["stick", {"es": "Moverse", "en": "Move"}],
+		[Pad.A, {"es": "Impulso", "en": "Dash"}],
+		[Pad.B, {"es": "Onda expansiva", "en": "Shockwave"}],
+	]
+	duration = 40.0
+
+
+func _setup() -> void:
+	for p in players:
+		var b := Ball.new()
+		b.player = p
+		b.pos = ARENA.get_center() + Vector2(-270 + 180 * p.index, 0)
+		_balls.append(b)
 	for i in STAR_COUNT:
 		_stars.append(_random_star_pos())
 		_star_anim.append(0.0)
-	PlayerManager.player_joined.connect(func(_p): _sync_balls())
-	_sync_balls()
 
 
-func _exit_tree() -> void:
-	PlayerManager.ui_navigation_enabled = true
-
-
-func _sync_balls() -> void:
-	for p in PlayerManager.active_players():
-		var exists := false
-		for b in _balls:
-			if b.player == p:
-				exists = true
-		if not exists:
-			var b := Ball.new()
-			b.player = p
-			b.pos = ARENA.get_center() + Vector2(-270 + 180 * p.index, 0)
-			_balls.append(b)
+func _game_process(delta: float) -> void:
+	for b in _balls:
+		_update_ball(b, delta)
+	_collide_balls()
+	_update_effects(delta)
 
 
 func _random_star_pos() -> Vector2:
@@ -91,52 +70,23 @@ func _random_star_pos() -> Vector2:
 			randf_range(ARENA.position.y + m, ARENA.end.y - m))
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		_exit()
-
-
-func _exit() -> void:
-	Sfx.play("back")
-	get_tree().change_scene_to_file(MENU_SCENE)
-
-
-func _process(delta: float) -> void:
-	_time += delta
-	_empty.visible = PlayerManager.connected_players().is_empty()
-	for b in _balls:
-		_update_ball(b, delta)
-	_collide_balls()
-	_update_effects(delta)
-	queue_redraw()
-
-
 func _update_ball(b: Ball, delta: float) -> void:
 	var p := b.player
 	b.dash_cd = maxf(0.0, b.dash_cd - delta)
 	b.wave_cd = maxf(0.0, b.wave_cd - delta)
 	b.squash = lerpf(b.squash, 1.0, minf(1.0, delta * 10.0))
-	if not p.is_connected_now():
-		b.vel *= exp(-4.0 * delta)
-		b.pos += b.vel * delta
-		return
 
-	if p.just_pressed(Pad.PLUS):
-		_exit()
-		return
-
-	# La cruceta fija una velocidad objetivo y la bola la alcanza rápido: responde
-	# al instante pero conserva algo de inercia (y los empujones se notan).
-	# Stick analógico si se está usando; si no, la cruceta.
-	var target := p.stick() * MAX_SPEED if p.stick() != Vector2.ZERO else p.dpad().normalized() * MAX_SPEED
-	b.vel = b.vel.lerp(target, 1.0 - exp(-STEER * delta)) if target != Vector2.ZERO \
-			else b.vel * exp(-STEER * 0.5 * delta)
+	# Stick analógico si se usa; si no, la cruceta. La velocidad persigue al control:
+	# responde al instante pero conserva algo de inercia.
+	var dir := p.stick() if p.stick() != Vector2.ZERO else p.dpad().normalized()
+	if dir != Vector2.ZERO:
+		b.vel = b.vel.lerp(dir * MAX_SPEED, 1.0 - exp(-STEER * delta))
+	else:
+		b.vel *= exp(-STEER * 0.5 * delta)
 
 	if p.just_pressed(Pad.A) and b.dash_cd <= 0.0:
-		var dir := p.dpad().normalized()
-		if dir == Vector2.ZERO:
-			dir = b.vel.normalized() if b.vel.length() > 30.0 else Vector2.RIGHT
-		b.vel += dir * DASH_SPEED
+		var d := dir if dir != Vector2.ZERO else (b.vel.normalized() if b.vel.length() > 30.0 else Vector2.RIGHT)
+		b.vel += d.normalized() * DASH_SPEED
 		b.dash_cd = DASH_COOLDOWN
 		b.squash = 1.35
 		Sfx.play("dash")
@@ -146,7 +96,6 @@ func _update_ball(b: Ball, delta: float) -> void:
 		_wave(b)
 
 	b.pos += b.vel * delta
-	# Rebote con los bordes de la arena.
 	var lo := ARENA.position + Vector2(RADIUS, RADIUS)
 	var hi := ARENA.end - Vector2(RADIUS, RADIUS)
 	if b.pos.x < lo.x or b.pos.x > hi.x:
@@ -160,7 +109,7 @@ func _update_ball(b: Ball, delta: float) -> void:
 
 	for i in _stars.size():
 		if _star_anim[i] <= 0.0 and b.pos.distance_to(_stars[i]) < RADIUS + STAR_RADIUS:
-			p.score += 1
+			add_score(p)
 			_star_anim[i] = 1.0
 			_burst(_stars[i], Color("ffd34d"), 14)
 			Sfx.play("star", randf_range(0.95, 1.1))
@@ -206,6 +155,7 @@ func _burst(at: Vector2, color: Color, n: int) -> void:
 
 
 func _update_effects(delta: float) -> void:
+	_time += delta
 	for i in _stars.size():
 		if _star_anim[i] > 0.0:
 			_star_anim[i] -= delta * 2.5
@@ -221,10 +171,9 @@ func _update_effects(delta: float) -> void:
 	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
 
 
-# --- Dibujo ---
+# --- Dibujo: MinigameBase llama a queue_redraw() cada frame ---
 
 func _draw() -> void:
-	_draw_hud()
 	draw_style_box(WiiTheme.panel_style(30), ARENA)
 	for i in _stars.size():
 		var s := 1.0 + sin(_time * 4.0 + i) * 0.08
@@ -253,9 +202,7 @@ func _draw_ball(b: Ball) -> void:
 	draw_circle(Vector2(0, RADIUS * 0.25), RADIUS * 0.75, col.darkened(0.08))
 	draw_circle(Vector2(-RADIUS * 0.3, -RADIUS * 0.35), RADIUS * 0.38, Color(1, 1, 1, 0.4))
 	draw_set_transform(Vector2.ZERO)
-	var num := str(b.player.index + 1)
-	var ts := _font.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, 30)
-	draw_string(_font, b.pos + Vector2(-ts.x / 2, ts.y * 0.32), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color.WHITE)
+	draw_text_centered(str(b.player.index + 1), b.pos, 30, Color.WHITE)
 
 
 func _draw_star(c: Vector2, r: float, rot: float, alpha: float) -> void:
@@ -267,28 +214,3 @@ func _draw_star(c: Vector2, r: float, rot: float, alpha: float) -> void:
 	outline.append(pts[0])
 	draw_colored_polygon(pts, Color(1.0, 0.83, 0.3, alpha))
 	draw_polyline(outline, Color(1, 1, 1, alpha), 3.0, true)
-
-
-func _draw_hud() -> void:
-	var title := tr("TEST_TITLE")
-	draw_string(_font, Vector2(48, 66), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 36, WiiTheme.TEXT)
-	var x := 1240.0
-	for i in range(PlayerManager.MAX_PLAYERS - 1, -1, -1):
-		var p := PlayerManager.players[i]
-		if p == null:
-			continue
-		# Píldora: bola con el número del jugador, estrella y puntos.
-		var txt := str(p.score)
-		var w := _font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x + 112
-		x -= w
-		var rect := Rect2(x, 30, w, 48)
-		var style := WiiTheme.panel_style(24, p.color if p.is_connected_now() else WiiTheme.PANEL_BORDER)
-		style.set_border_width_all(3)
-		draw_style_box(style, rect)
-		draw_circle(Vector2(x + 26, 54), 15, p.color)
-		var num := str(i + 1)
-		var ns := _font.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, 18)
-		draw_string(_font, Vector2(x + 26 - ns.x / 2, 61), num, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-		_draw_star(Vector2(x + 64, 54), 13, 0.0, 1.0)
-		draw_string(_font, Vector2(x + 84, 63), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, p.color.darkened(0.15))
-		x -= 12

@@ -15,7 +15,13 @@ func _ready() -> void:
 	_load()
 	apply_locale()
 	_setup_input()
-	get_tree().root.theme = WiiTheme.build()
+	# El tema va DENTRO del tema por defecto de Godot: el de la ventana raíz solo se
+	# hereda si todos los padres son Control/Window, y los HUD cuelgan de CanvasLayer.
+	var theme := WiiTheme.build()
+	ThemeDB.get_default_theme().merge_with(theme)
+	ThemeDB.get_default_theme().default_font = theme.default_font
+	ThemeDB.get_default_theme().default_font_size = theme.default_font_size
+	get_tree().root.theme = theme
 
 
 func apply_locale() -> void:

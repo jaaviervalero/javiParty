@@ -14,6 +14,10 @@ var score := 0
 var layout: Dictionary = Pad.LAYOUT_DSUCONTROLLER_WIIMOTE
 ## Sujeción actual: cada minijuego la fija al empezar (ver Pad.Grip).
 var grip := Pad.Grip.VERTICAL
+## Jugador simulado (tests automáticos): sus entradas vienen de bot_buttons/bot_stick.
+var bot := false
+var bot_buttons := 0
+var bot_stick := Vector2.ZERO
 
 const STICK_DEADZONE := 0.15
 const STICK_PRESS := 0.55
@@ -31,7 +35,7 @@ func _init(p_index: int, p_color: Color, p_name: String) -> void:
 
 
 func is_connected_now() -> bool:
-	return controller != null and controller.connected
+	return bot or (controller != null and controller.connected)
 
 
 ## Llamado una vez por frame por PlayerManager.
@@ -39,6 +43,9 @@ func update_buttons() -> void:
 	_prev_buttons = _cur_buttons
 	if not is_connected_now():
 		_cur_buttons = 0
+		return
+	if bot:
+		_cur_buttons = bot_buttons | _stick_as_dpad()
 		return
 	_cur_buttons = Pad.from_raw(controller.buttons, layout, grip) | _stick_as_dpad()
 
@@ -49,7 +56,7 @@ func update_buttons() -> void:
 func stick() -> Vector2:
 	if not is_connected_now():
 		return Vector2.ZERO
-	var v := controller.left_stick
+	var v := bot_stick if bot else controller.left_stick
 	return Vector2.ZERO if v.length() < STICK_DEADZONE else v
 
 

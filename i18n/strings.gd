@@ -12,9 +12,15 @@ const TEXT := {
 	"WAITING_PLAYER": ["Esperando mando…", "Waiting for controller…"],
 	"STATUS_CONNECTED": ["Conectado", "Connected"],
 	"STATUS_DISCONNECTED": ["Desconectado", "Disconnected"],
-	"BTN_PLAY_TEST": ["Probar mando", "Test controller"],
+	"BTN_PLAY": ["Jugar", "Play"],
 	"BTN_SCAN_ON": ["Búsqueda: activada", "Search: on"],
 	"BTN_SCAN_OFF": ["Búsqueda: desactivada", "Search: off"],
+	"BTN_QR": ["QR del mando", "Controller QR"],
+	"BTN_CLOSE": ["Cerrar", "Close"],
+	"QR_TITLE": ["El mando de javiParty", "The javiParty controller"],
+	"QR_STEPS": [
+		"1. Instala DSU Controller (v3.0.6 o superior).\n2. En la app, escanea este código para añadir el mando.\n3. Elige el mando de javiParty, ponte en la misma wifi que la tele y deja la app abierta.",
+		"1. Install DSU Controller (v3.0.6 or later).\n2. In the app, scan this code to add the controller.\n3. Pick the javiParty controller, join the TV's Wi-Fi and keep the app open."],
 	"BTN_MANUAL_IP": ["Añadir IP a mano", "Add IP manually"],
 	"BTN_LANGUAGE": ["Idioma: Español", "Language: English"],
 	"BTN_DEBUG": ["Depuración", "Debug info"],
@@ -42,11 +48,6 @@ const TEXT := {
 	"BAT_5": ["llena", "full"],
 	"BAT_CHARGING": ["cargando", "charging"],
 	"BAT_CHARGED": ["cargada", "charged"],
-	"TEST_TITLE": ["Prueba de mando", "Controller test"],
-	"TEST_HELP": [
-		"Stick o cruceta: mover · A: impulso · B: onda · +: salir",
-		"Stick or D-pad: move · A: dash · B: shockwave · +: exit"],
-	"TEST_NO_PLAYERS": ["Conecta un mando para jugar", "Connect a controller to play"],
 }
 
 

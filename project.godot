@@ -16,6 +16,7 @@ Sfx="*res://core/sfx.gd"
 DSUClient="*res://net/dsu_client.gd"
 NetworkScanner="*res://net/network_scanner.gd"
 PlayerManager="*res://core/player_manager.gd"
+GameFlow="*res://core/game_flow.gd"
 DebugOverlay="*res://ui/debug_overlay.gd"
 
 [display]
