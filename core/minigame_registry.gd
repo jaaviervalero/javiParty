@@ -24,6 +24,12 @@ const GAMES := [
 		"title": {"es": "Al compás", "en": "On the beat"}},
 	{"id": "ovejas", "scene": "res://minigames/ovejas/ovejas.tscn",
 		"title": {"es": "Cuenta ovejas", "en": "Count the sheep"}},
+	{"id": "tanques", "scene": "res://minigames/tanques/tanques.tscn",
+		"title": {"es": "Tanquecitos", "en": "Tiny tanks"}},
+	{"id": "colina", "scene": "res://minigames/colina/colina.tscn",
+		"title": {"es": "Rey de la colina", "en": "King of the hill"}},
+	{"id": "pesca", "scene": "res://minigames/pesca/pesca.tscn",
+		"title": {"es": "A pescar", "en": "Gone fishing"}},
 ]
 
 
