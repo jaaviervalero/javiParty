@@ -10,6 +10,7 @@ Escribe en la raíz del proyecto (o donde se le diga):
   icon.png                      512x512  icono de proyecto y `launcher_icons/main_192x192`
   icon_foreground_432x432.png   solo el logo, transparente, dentro de la zona segura
   icon_background_432x432.png   solo el fondo (degradado + ondas)
+  icon.ico                      icono del .exe de Windows (16-256 px)
 
 Android recorta el icono adaptativo hasta el 66% central (círculo de 285 px de los
 432), así que el logo se dibuja al 52% del lienzo para que no lo corte ninguna
@@ -118,6 +119,8 @@ def main():
     img, ink, box = compose((512, 512), 112, True, 0.62)
     check("icon.png", ink, box, (512, 512))
     img.save(os.path.join(out, "icon.png"))
+    # El .exe de Windows necesita .ico (lo incrusta rcedit al exportar).
+    img.save(os.path.join(out, "icon.ico"), sizes=[(s, s) for s in (16, 24, 32, 48, 64, 128, 256)])
 
     # El logo al 52%: Android recorta el adaptativo hasta el 66% central.
     fg, ink, box = compose((432, 432), 0, False, 0.52)
@@ -125,7 +128,7 @@ def main():
     fg.save(os.path.join(out, "icon_foreground_432x432.png"))
 
     background((432, 432), 0).save(os.path.join(out, "icon_background_432x432.png"))
-    print("Escritos los tres iconos en", out)
+    print("Escritos los iconos en", out)
 
 
 main()

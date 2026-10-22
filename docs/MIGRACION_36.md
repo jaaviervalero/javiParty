@@ -15,7 +15,15 @@ godot3 --headless --path . -s tests/run_tests.gd    # DSU, CRC y mandos
 godot3 --headless --path . -s tests/ui_focus.gd     # foco y rejilla del selector
 godot3 --headless --path . -s tests/players.gd      # mandos -> jugadores (misma MAC)
 tools/android.sh --export           # APK (build/javiparty.apk)
+godot3 --headless --path . --export "Windows" build/windows/javiParty.exe   # .exe con el juego dentro
 ```
+
+Para el `.exe` hacen falta las plantillas `windows_64_*.exe` de 3.6.3 en
+`~/.local/share/godot/templates/3.6.3.stable/` (salen del mismo `.tpz` que las de
+Android) y, para que lleve el icono (`icon.ico`, de `tools/make_icon.py`), `rcedit`
++ `wine` puestos en `export/windows/rcedit` y `export/windows/wine` de
+`~/.config/godot/editor_settings-3.tres`. Se prueba sin Windows con
+`xvfb-run wine build/windows/javiParty.exe` y `tools/dsu_simulator.py --auto`.
 
 Ojo con dos trampas del modo headless:
 
