@@ -93,7 +93,7 @@ section { scroll-margin-top: 80px; }
 .how { padding: 30px 0 10px; }
 .how > h2, .faq > h2 { font-size: 32px; text-align: center; margin-bottom: 26px; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
-.steps.three { grid-template-columns: repeat(3, 1fr); }
+.steps.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .steps li {
   position: relative; background: var(--panel); border-radius: var(--radius);
   padding: 22px 22px 22px 84px; box-shadow: var(--shadow); border: 1px solid var(--border);
@@ -165,7 +165,7 @@ section { scroll-margin-top: 80px; }
 .section-head .emoji { font-size: 48px; line-height: 1; }
 .section-head h2 { font-size: 30px; }
 .sub { margin: 8px 0 0; color: var(--soft); }
-.card-section .steps { grid-template-columns: repeat(2, 1fr); align-items: start; }
+.card-section .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 .actions { margin: 4px 0 22px; }
 .card-section .steps + .actions { margin: 22px 0 6px; }
 
@@ -180,7 +180,7 @@ section { scroll-margin-top: 80px; }
 }
 .copy.done { color: #2f8a4a; border-color: #bfe3c9; }
 .code-box {
-  display: flex; align-items: baseline; gap: 12px; margin: 12px 0 6px; padding: 12px 18px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 12px 0 6px; padding: 12px 18px;
   background: #fff7e8; border: 2px solid #f6d9a6; border-radius: 14px;
 }
 .code-box strong { font-size: 36px; font-weight: 900; letter-spacing: 3px; color: #c46a12; }
@@ -239,7 +239,8 @@ footer .dots { justify-content: center; }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; padding-top: 32px; gap: 28px; }
   .screen { transform: none; }
-  .steps.three, .card-section .steps { grid-template-columns: 1fr; }
+  .steps.three, .card-section .steps { grid-template-columns: minmax(0, 1fr); }
+  .code-box strong { font-size: 30px; letter-spacing: 2px; }
   .games-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .game figcaption { padding: 10px 12px 12px; }
   .game h3 { font-size: 16px; }
