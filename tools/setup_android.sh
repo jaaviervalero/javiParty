@@ -17,7 +17,9 @@ JAVA_HOME="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)"
 GV="$(godot --version | cut -d. -f1-4)"
 NUM="${GV%.*}"; KIND="${GV##*.}"
 TPL_DIR="$HOME/.local/share/godot/export_templates/$GV"
-TMP="$(mktemp -d)"
+# Temporal en disco (no en /tmp, que suele ser RAM y las plantillas ocupan ~3 GB al descomprimir).
+mkdir -p "$HOME/.cache"
+TMP="$(mktemp -d -p "$HOME/.cache" javiparty-setup.XXXX)"
 trap 'rm -rf "$TMP"' EXIT
 
 echo "== Godot $GV · JDK en $JAVA_HOME · SDK en $SDK"
@@ -31,7 +33,8 @@ else
 	echo "== Descargando plantillas: $URL"
 	curl -L --fail -o "$TMP/templates.tpz" "$URL"
 	mkdir -p "$TPL_DIR"
-	unzip -q "$TMP/templates.tpz" -d "$TMP/tpl"
+	# Solo lo de Android (el paquete trae todas las plataformas).
+	unzip -q "$TMP/templates.tpz" 'templates/android_*' 'templates/version.txt' -d "$TMP/tpl"
 	cp -r "$TMP/tpl/templates/." "$TPL_DIR/"
 	rm -f "$TMP/templates.tpz"
 	echo "   -> $TPL_DIR"
