@@ -1,6 +1,7 @@
 extends MinigameBase
 ## "Pinta el suelo": cada jugador es una bola que repinta el suelo a su color al
-## pasar. A lanza un salpicón y B da un sprint. Gana quien tenga más casillas.
+## pasar. Por las casillas aparecen power-ups (bomba, brocha grande y rayo) que
+## se cogen rodando por encima. Gana quien tenga más casillas al final.
 
 const BALL_RADIUS := 26.0
 const MAX_SPEED := 380.0
@@ -9,39 +10,57 @@ const CELL := 40.0
 const COLS := 30
 const ROWS := 15
 const PAINT_REACH := 29.0      # radio de pintura al rodar (algo más de media casilla)
-const SPLAT_RADIUS := 2.5      # en casillas
-const SPLAT_COOLDOWN := 3.0
-const SPRINT_TIME := 0.6
-const SPRINT_MULT := 1.8
-const SPRINT_COOLDOWN := 2.0
+
+# Power-ups
+const BOMB := 0
+const BRUSH := 1
+const SPEED := 2
+const POWERUP_RADIUS := 24.0
+const POWERUP_MAX := 3
+const POWERUP_INTERVAL := 4.0
+const POWERUP_INITIAL := 2
+const BOMB_CELLS := 3.0        # radio de la explosión, en casillas
+const BRUSH_TIME := 6.0
+const BRUSH_RADIUS_MULT := 1.35
+const SPEED_TIME := 5.0
+const SPEED_MULT := 1.7
+const BRUSH_COLOR := Color("8e4ec6")
+const SPEED_COLOR := Color("ffd34d")
 
 
 class Ball:
 	var player: Player
 	var pos: Vector2
 	var vel := Vector2.ZERO
-	var splat_cd := 0.0
-	var sprint_cd := 0.0
-	var sprint_left := 0.0
+	var brush_left := 0.0       # segundos de brocha grande
+	var speed_left := 0.0       # segundos de rayo
 	var squash := 1.0
 
 
+class Powerup:
+	var kind: int
+	var pos: Vector2
+	var cell: Vector2i
+	var age := 0.0
+
+
 var _balls: Array[Ball] = []
+var _powerups: Array[Powerup] = []
 var _owner := PackedInt32Array()   # 0 = vacía; si no, index del jugador + 1
 var _count := [0, 0, 0, 0]
 var _colors: Array[Color] = []
-var _rings: Array = []             # [pos, t, color]
-var _time := 0.0
+var _waves: Array = []             # [pos, t, radio_max, color]
+var _confetti: Array = []          # [pos, vel, color, vida]
+var _spawn_timer := POWERUP_INTERVAL
 
 
 func _configure() -> void:
 	title = {"es": "Pinta el suelo", "en": "Paint the floor"}
-	instructions = {"es": "Pinta más casillas que nadie pasando por encima y con salpicones.",
-		"en": "Paint more tiles than anyone by rolling over them and splatting."}
+	instructions = {"es": "Pinta más casillas que nadie rodando por el suelo y cogiendo power-ups.",
+		"en": "Paint more tiles than anyone by rolling around and grabbing power-ups."}
 	controls = [
 		["stick", {"es": "Moverse", "en": "Move"}],
-		[Pad.A, {"es": "Salpicón", "en": "Splat"}],
-		[Pad.B, {"es": "Sprint", "en": "Sprint"}],
+		["dpad", {"es": "Moverse", "en": "Move"}],
 	]
 	duration = 45.0
 
@@ -61,46 +80,47 @@ func _setup() -> void:
 		b.player = players[i]
 		b.pos = center + Vector2(start + step * i, 0)
 		_balls.append(b)
+	for i in POWERUP_INITIAL:
+		_spawn_powerup()
+
+
+func _game_start() -> void:
+	_spawn_timer = POWERUP_INTERVAL
 
 
 func _game_process(delta: float) -> void:
-	_time += delta
 	for b in _balls:
 		_update_ball(b, delta)
-		_paint(b.pos, PAINT_REACH, b.player.index + 1)
 	_collide_balls()
+	for b in _balls:
+		_paint_trail(b)
+	_pickups()
+	_spawn_timer -= delta
+	if _spawn_timer <= 0.0:
+		_spawn_timer = POWERUP_INTERVAL
+		if _powerups.size() < POWERUP_MAX:
+			_spawn_powerup()
 	_sync_scores()
 	_update_effects(delta)
 
 
 func _update_ball(b: Ball, delta: float) -> void:
-	b.splat_cd = maxf(0.0, b.splat_cd - delta)
-	b.sprint_cd = maxf(0.0, b.sprint_cd - delta)
-	b.sprint_left = maxf(0.0, b.sprint_left - delta)
+	b.brush_left = maxf(0.0, b.brush_left - delta)
+	b.speed_left = maxf(0.0, b.speed_left - delta)
 	b.squash = lerpf(b.squash, 1.0, minf(1.0, delta * 10.0))
 	var p := b.player
 	var dir := p.stick() if p.stick() != Vector2.ZERO else p.dpad().normalized()
-	var top := MAX_SPEED * (SPRINT_MULT if b.sprint_left > 0.0 else 1.0)
+	var top := MAX_SPEED * (SPEED_MULT if b.speed_left > 0.0 else 1.0)
 	if dir != Vector2.ZERO:
 		b.vel = b.vel.lerp(dir.normalized() * top, 1.0 - exp(-STEER * delta))
 	else:
 		b.vel *= exp(-STEER * 0.6 * delta)
-	if p.just_pressed(Pad.A) and b.splat_cd <= 0.0:
-		b.splat_cd = SPLAT_COOLDOWN
-		b.squash = 1.3
-		_paint(b.pos, SPLAT_RADIUS * CELL, p.index + 1)
-		_rings.append([b.pos, 0.0, p.color])
-		Sfx.play("pop", randf_range(0.9, 1.05))
-	if p.just_pressed(Pad.B) and b.sprint_cd <= 0.0:
-		b.sprint_cd = SPRINT_COOLDOWN
-		b.sprint_left = SPRINT_TIME
-		Sfx.play("dash", randf_range(1.0, 1.15))
 	b.pos += b.vel * delta
 	_bounce(b)
 
 
 func _bounce(b: Ball) -> void:
-	var r := _grid_rect().grow(-BALL_RADIUS)
+	var r := _grid_rect().grow(-_ball_radius(b))
 	if b.pos.x < r.position.x:
 		b.pos.x = r.position.x
 		b.vel.x = absf(b.vel.x) * 0.7
@@ -119,6 +139,10 @@ func _bounce(b: Ball) -> void:
 		b.squash = 0.85
 
 
+func _ball_radius(b: Ball) -> float:
+	return BALL_RADIUS * (BRUSH_RADIUS_MULT if b.brush_left > 0.0 else 1.0)
+
+
 func _collide_balls() -> void:
 	for i in _balls.size():
 		for j in range(i + 1, _balls.size()):
@@ -126,10 +150,11 @@ func _collide_balls() -> void:
 			var b := _balls[j]
 			var d := b.pos - a.pos
 			var dist := d.length()
-			if dist >= BALL_RADIUS * 2.0 or dist < 0.01:
+			var min_dist := _ball_radius(a) + _ball_radius(b)
+			if dist >= min_dist or dist < 0.01:
 				continue
 			var n := d / dist
-			var overlap := BALL_RADIUS * 2.0 - dist
+			var overlap := min_dist - dist
 			a.pos -= n * overlap * 0.5
 			b.pos += n * overlap * 0.5
 			var rel := (b.vel - a.vel).dot(n)
@@ -138,6 +163,91 @@ func _collide_balls() -> void:
 				b.vel -= n * rel * 0.9
 				a.squash = 0.88
 				b.squash = 0.88
+
+
+# --- Power-ups ---
+
+func _spawn_powerup() -> void:
+	var o := _grid_origin()
+	for _attempt in 40:
+		var cell := Vector2i(randi_range(0, COLS - 1), randi_range(0, ROWS - 1))
+		var pos := o + Vector2((cell.x + 0.5) * CELL, (cell.y + 0.5) * CELL)
+		if not _spot_is_free(pos):
+			continue
+		var pu := Powerup.new()
+		pu.kind = randi_range(0, 2)
+		pu.pos = pos
+		pu.cell = cell
+		_powerups.append(pu)
+		return
+
+
+func _spot_is_free(pos: Vector2) -> bool:
+	for b in _balls:
+		if b.pos.distance_to(pos) < BALL_RADIUS + POWERUP_RADIUS + 24.0:
+			return false
+	for pu in _powerups:
+		if pu.pos.distance_to(pos) < CELL * 2.0:
+			return false
+	return true
+
+
+func _pickups() -> void:
+	for i in range(_powerups.size() - 1, -1, -1):
+		var pu := _powerups[i]
+		for b in _balls:
+			if b.pos.distance_to(pu.pos) <= _ball_radius(b) + POWERUP_RADIUS:
+				_powerups.remove_at(i)
+				_apply_powerup(b, pu)
+				break
+
+
+func _apply_powerup(b: Ball, pu: Powerup) -> void:
+	match pu.kind:
+		BOMB:
+			_explode(b)
+		BRUSH:
+			b.brush_left = BRUSH_TIME
+			b.squash = 1.25
+			_burst(pu.pos, BRUSH_COLOR, 14)
+			Sfx.play("star", randf_range(0.95, 1.1))
+		SPEED:
+			b.speed_left = SPEED_TIME
+			b.squash = 1.25
+			_burst(pu.pos, SPEED_COLOR, 14)
+			Sfx.play("dash", randf_range(1.0, 1.15))
+
+
+func _explode(b: Ball) -> void:
+	var owner := b.player.index + 1
+	_paint(b.pos, BOMB_CELLS * CELL, owner)
+	_waves.append([b.pos, 0.0, BOMB_CELLS * CELL, b.player.color])
+	_burst(b.pos, b.player.color, 28)
+	b.squash = 1.4
+	Sfx.play("wave", randf_range(0.9, 1.05))
+
+
+# --- Pintura ---
+
+func _paint_trail(b: Ball) -> void:
+	if b.brush_left > 0.0:
+		_paint_brush(b.pos, b.player.index + 1)
+	else:
+		_paint(b.pos, PAINT_REACH, b.player.index + 1)
+
+
+## 3x3 casillas alrededor de la casilla donde está la bola.
+func _paint_brush(center: Vector2, owner: int) -> void:
+	var o := _grid_origin()
+	var cx := int(floor((center.x - o.x) / CELL))
+	var cy := int(floor((center.y - o.y) / CELL))
+	for y in range(cy - 1, cy + 2):
+		if y < 0 or y >= ROWS:
+			continue
+		for x in range(cx - 1, cx + 2):
+			if x < 0 or x >= COLS:
+				continue
+			_set_cell(y * COLS + x, owner)
 
 
 func _grid_origin() -> Vector2:
@@ -181,10 +291,23 @@ func _sync_scores() -> void:
 		set_score(p, _count[p.index])
 
 
+func _burst(at: Vector2, color: Color, n: int) -> void:
+	for i in n:
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(120.0, 420.0)
+		_confetti.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.5, 0.9)])
+
+
 func _update_effects(delta: float) -> void:
-	for r in _rings:
-		r[1] += delta * 2.2
-	_rings = _rings.filter(func(r): return r[1] < 1.0)
+	for pu in _powerups:
+		pu.age += delta
+	for w in _waves:
+		w[1] += delta * 1.8
+	_waves = _waves.filter(func(w): return w[1] < 1.0)
+	for c in _confetti:
+		c[0] += c[1] * delta
+		c[1] = c[1] * exp(-3.0 * delta) + Vector2(0, 500) * delta
+		c[3] -= delta
+	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
 
 
 func _game_end() -> void:
@@ -196,12 +319,17 @@ func _game_end() -> void:
 func _draw() -> void:
 	draw_style_box(WiiTheme.panel_style(30), ARENA)
 	_draw_floor()
-	for r in _rings:
-		var t: float = r[1]
-		draw_arc(r[0], 10.0 + SPLAT_RADIUS * CELL * t, 0.0, TAU, 48,
-				Color(r[2], 0.6 * (1.0 - t)), 6.0 * (1.0 - t) + 1.0, true)
+	for pu in _powerups:
+		_draw_powerup(pu)
+	for w in _waves:
+		var t: float = w[1]
+		draw_arc(w[0], w[2] * t, 0.0, TAU, 48, Color(w[3], 0.6 * (1.0 - t)),
+				6.0 * (1.0 - t) + 1.0, true)
 	for b in _balls:
 		_draw_ball(b)
+	for c in _confetti:
+		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)),
+				Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
 
 
 func _draw_floor() -> void:
@@ -225,26 +353,79 @@ func _draw_floor() -> void:
 	draw_rect(Rect2(o, Vector2(COLS * CELL, ROWS * CELL)), WiiTheme.PANEL_BORDER, false, 3.0)
 
 
+func _draw_powerup(pu: Powerup) -> void:
+	var bob := sin(pu.age * 4.0) * 3.0
+	var c := pu.pos + Vector2(0, bob)
+	var pulse := 1.0 + sin(pu.age * 5.0) * 0.05
+	draw_circle(pu.pos + Vector2(0, 18), POWERUP_RADIUS * 0.85, WiiTheme.SHADOW)
+	draw_circle(c, POWERUP_RADIUS * pulse, Color.WHITE)
+	draw_arc(c, POWERUP_RADIUS * pulse, 0.0, TAU, 32, WiiTheme.ACCENT_DARK, 4.0, true)
+	match pu.kind:
+		BOMB:
+			_draw_icon_bomb(c)
+		BRUSH:
+			_draw_icon_brush(c)
+		SPEED:
+			_draw_icon_bolt(c)
+
+
+func _draw_icon_bomb(c: Vector2) -> void:
+	draw_circle(c + Vector2(0, 2), 9.0, WiiTheme.ACCENT_DARK)
+	draw_circle(c + Vector2(-3, -1), 3.0, Color(1, 1, 1, 0.45))
+	draw_line(c + Vector2(5, -7), c + Vector2(9, -12), WiiTheme.ACCENT_DARK, 3.0, true)
+	draw_circle(c + Vector2(10, -13), 3.2, Color("ffd34d"))
+
+
+func _draw_icon_brush(c: Vector2) -> void:
+	draw_set_transform(c, -0.7, Vector2.ONE)
+	draw_rect(Rect2(-3.0, -14.0, 6.0, 15.0), WiiTheme.ACCENT_DARK)
+	draw_rect(Rect2(-7.0, -1.0, 14.0, 4.0), WiiTheme.ACCENT_DARK)
+	var pts := PackedVector2Array([Vector2(-7, 3), Vector2(7, 3), Vector2(5, 12), Vector2(-5, 12)])
+	draw_colored_polygon(pts, WiiTheme.ACCENT)
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_icon_bolt(c: Vector2) -> void:
+	var pts := PackedVector2Array([
+		c + Vector2(2, -14), c + Vector2(-9, 2), c + Vector2(-1, 2),
+		c + Vector2(-3, 14), c + Vector2(9, -3), c + Vector2(1, -3),
+	])
+	draw_colored_polygon(pts, Color("ffd34d"))
+	var outline := pts.duplicate()
+	outline.append(pts[0])
+	draw_polyline(outline, WiiTheme.ACCENT_DARK, 2.5, true)
+
+
 func _draw_ball(b: Ball) -> void:
 	var col := b.player.color
 	if not b.player.is_connected_now():
 		col = col.lerp(Color("c8ced4"), 0.7)
-	# Rastro del sprint.
-	if b.sprint_left > 0.0 and b.vel.length() > 40.0:
-		var back := b.pos - b.vel.normalized() * 16.0
-		draw_circle(back, BALL_RADIUS * 0.8, Color(col, 0.22))
+	var r := _ball_radius(b)
+	# Estela del rayo.
+	if b.speed_left > 0.0 and b.vel.length() > 40.0:
+		var back := b.pos - b.vel.normalized() * (r * 0.4)
+		for i in 3:
+			draw_circle(back - b.vel.normalized() * (i * 13.0), r * (0.7 - i * 0.15),
+					Color(col, 0.24 - i * 0.06))
 	var stretch := Vector2(1.0 / b.squash, b.squash)
 	draw_set_transform(b.pos + Vector2(0, 6), 0.0, Vector2(stretch.x * 1.1, 0.35))
-	draw_circle(Vector2.ZERO, BALL_RADIUS, WiiTheme.SHADOW)
+	draw_circle(Vector2.ZERO, r, WiiTheme.SHADOW)
 	draw_set_transform(b.pos, 0.0, stretch)
-	draw_circle(Vector2.ZERO, BALL_RADIUS, col)
-	draw_circle(Vector2(0, BALL_RADIUS * 0.25), BALL_RADIUS * 0.75, col.darkened(0.08))
-	draw_circle(Vector2(-BALL_RADIUS * 0.3, -BALL_RADIUS * 0.35), BALL_RADIUS * 0.38,
-			Color(1, 1, 1, 0.4))
+	draw_circle(Vector2.ZERO, r, col)
+	draw_circle(Vector2(0, r * 0.25), r * 0.75, col.darkened(0.08))
+	draw_circle(Vector2(-r * 0.3, -r * 0.35), r * 0.38, Color(1, 1, 1, 0.4))
 	draw_set_transform(Vector2.ZERO)
-	draw_text_centered(str(b.player.index + 1), b.pos, 26, Color.WHITE)
-	# Recarga del salpicón.
-	if b.splat_cd > 0.0:
-		var t := 1.0 - b.splat_cd / SPLAT_COOLDOWN
-		draw_arc(b.pos, BALL_RADIUS + 8.0, -PI * 0.5, -PI * 0.5 + TAU * t, 24,
-				Color(col, 0.6), 3.0, true)
+	draw_text_centered(str(b.player.index + 1), b.pos, int(26.0 * r / BALL_RADIUS), Color.WHITE)
+	# Aros con el tiempo que le queda a cada efecto activo.
+	var ring := r + 8.0
+	if b.brush_left > 0.0:
+		_draw_effect_ring(b.pos, ring, b.brush_left / BRUSH_TIME, BRUSH_COLOR)
+		ring += 8.0
+	if b.speed_left > 0.0:
+		_draw_effect_ring(b.pos, ring, b.speed_left / SPEED_TIME, SPEED_COLOR)
+
+
+func _draw_effect_ring(center: Vector2, radius: float, frac: float, color: Color) -> void:
+	draw_arc(center, radius, 0.0, TAU, 32, Color(color, 0.18), 5.0, true)
+	draw_arc(center, radius, -PI * 0.5, -PI * 0.5 + TAU * clampf(frac, 0.0, 1.0), 32,
+			color, 5.0, true)
