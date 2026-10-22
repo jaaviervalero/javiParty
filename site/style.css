@@ -256,3 +256,50 @@ footer .dots { justify-content: center; }
   .teaser { flex-direction: column; text-align: center; padding: 18px; }
   .teaser-thumbs img { width: 96px; }
 }
+
+/* --- Animaciones al hacer scroll (main.js pone .reveal y .in). Solo con JS y
+   sin "reducir movimiento"; si no, todo se ve quieto desde el principio. --- */
+.top { transition: box-shadow .25s, background .25s; }
+.top.scrolled { box-shadow: 0 6px 20px rgba(50, 75, 100, .10); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .reveal {
+    opacity: 0; transform: translateY(26px) scale(.98);
+    transition: opacity .6s ease, transform .7s cubic-bezier(.2, .75, .25, 1);
+    transition-delay: var(--d, 0ms);
+  }
+  .js .reveal.in { opacity: 1; transform: none; }
+  /* Los números de los pasos dan un saltito al aparecer. */
+  .js .steps li.reveal.in > b { animation: pop .55s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--d, 0ms) + 180ms); }
+  @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+  /* Portada: entra en cascada al cargar. */
+  .js .hero-text > * { animation: rise .7s cubic-bezier(.2, .75, .25, 1) both; }
+  .js .hero-text > :nth-child(2) { animation-delay: .08s; }
+  .js .hero-text > :nth-child(3) { animation-delay: .16s; }
+  .js .hero-text > :nth-child(4) { animation-delay: .24s; }
+  .js .hero-text > :nth-child(n+5) { animation-delay: .32s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+  .js .hero .dots i { animation: bounce .9s cubic-bezier(.3, 1.6, .5, 1) both; }
+  .js .hero .dots i:nth-child(2) { animation-delay: .1s; }
+  .js .hero .dots i:nth-child(3) { animation-delay: .2s; }
+  .js .hero .dots i:nth-child(4) { animation-delay: .3s; }
+  @keyframes bounce { 0% { transform: translateY(-18px) scale(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+  /* La tele de la portada: entra girando y luego flota con el scroll (parallax). */
+  .js .screen {
+    transform: translateY(var(--py, 0px)) rotate(1.2deg);
+    animation: tv-in .9s cubic-bezier(.2, .8, .25, 1) .15s both;
+  }
+  @keyframes tv-in { from { opacity: 0; transform: translateY(40px) rotate(7deg) scale(.92); } }
+
+  /* Capturas: un pelín de zoom al pasar por encima. */
+  .shot img, .teaser-thumbs img { transition: transform .3s ease; }
+  .game:hover .shot img { transform: scale(1.04); }
+  .shot { overflow: hidden; }
+  .teaser:hover .teaser-thumbs img:nth-child(1) { transform: rotate(-8deg) translateX(-6px); }
+  .teaser:hover .teaser-thumbs img:nth-child(3) { transform: rotate(8deg) translateX(6px); }
+}
+@media (max-width: 860px) {
+  .js .screen { transform: none; }
+}
