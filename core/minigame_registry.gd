@@ -33,6 +33,8 @@ const GAMES := [
 		"title": {"es": "Para el reloj", "en": "Stop the clock"}},
 	{"id": "globos", "scene": "res://minigames/globos/globos.tscn",
 		"title": {"es": "Infla el globo", "en": "Pump it up"}},
+	{"id": "dominadas", "scene": "res://minigames/dominadas/dominadas.tscn",
+		"title": {"es": "Concurso de dominadas", "en": "Pull-up contest"}},
 ]
 
 
