@@ -12,6 +12,19 @@ const PUMP_Y := 600.0
 const NOZZLE_Y := 548.0
 const MAX_COL_W := 340.0
 const COL_MARGIN := 12.0
+# Ambiente: feria al aire libre.
+const SKY_TOP_G := Color("bfe9fb")
+const SKY_BOTTOM_G := Color("fdf3e3")
+const GROUND_TOP := Color("a8dd8a")
+const GROUND_BOTTOM := Color("86c96a")
+const GROUND_Y := 590.0
+const TENT_STRIPE := Color("ffb1a8")
+const TENT_CREAM := Color("fff4e0")
+const BUNTING_COLORS = [Color("ffb3c1"), Color("ffe08a"), Color("a8e6cf"),
+		Color("b8c9f5"), Color("e3c6f2")]
+const AMBIENT_COLORS = [Color("ffc2d1"), Color("ffe6a1"), Color("bfe6fb")]
+# [x en fracción de la arena, velocidad, desfase]
+const AMBIENT_BALLOONS = [[0.22, 0.28, 0.0], [0.52, 0.22, 0.45], [0.80, 0.25, 0.78]]
 
 
 class Balloon:
@@ -108,14 +121,90 @@ func _update_effects(delta: float) -> void:
 
 # --- Dibujo ---
 
-func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
+## Ambiente fijo: feria al aire libre con carpa y guirnalda. Se pinta una vez.
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, SKY_TOP_G, SKY_BOTTOM_G)
+	DrawKit.sun(ci, Vector2(ARENA.end.x - 170.0, ARENA.position.y + 140.0), 30.0, 0.3)
+	DrawKit.hills(ci, ARENA, GROUND_Y - 70.0, 26.0, Color("b7e69c"), 1.2, 1.6, clip)
+	_draw_tent(ci, clip)
+	# Césped del suelo, con una banda más oscura al fondo.
+	var ground := PackedVector2Array([
+		Vector2(ARENA.position.x, GROUND_Y), Vector2(ARENA.end.x, GROUND_Y),
+		Vector2(ARENA.end.x, ARENA.end.y), Vector2(ARENA.position.x, ARENA.end.y)])
+	DrawKit.clipped_polygon(ci, ground, clip, GROUND_TOP)
+	var lower := PackedVector2Array([
+		Vector2(ARENA.position.x, ARENA.end.y - 36.0), Vector2(ARENA.end.x, ARENA.end.y - 36.0),
+		Vector2(ARENA.end.x, ARENA.end.y), Vector2(ARENA.position.x, ARENA.end.y)])
+	DrawKit.clipped_polygon(ci, lower, clip, GROUND_BOTTOM)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 30.0, GROUND_Y + 14.0),
+			Vector2(ARENA.end.x - 30.0, GROUND_Y + 14.0), 28, DrawKit.GRASS_DARK, 7)
+	_draw_bunting(ci)
+	# Columnas de cada jugador (translúcidas y fijas).
 	var colw := _col_width()
 	var left := _col_left()
 	for i in _balloons.size():
 		var rect := Rect2(left + colw * i + COL_MARGIN, ARENA.position.y + COL_MARGIN,
 				colw - COL_MARGIN * 2.0, ARENA.size.y - COL_MARGIN * 2.0)
-		draw_style_box(_balloons[i].style, rect)
+		ci.draw_style_box(_balloons[i].style, rect)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Carpa de rayas pastel al fondo, con banderín.
+func _draw_tent(ci: CanvasItem, clip: PackedVector2Array) -> void:
+	var cx := ARENA.get_center().x
+	var body := Rect2(cx - 130.0, GROUND_Y - 150.0, 260.0, 150.0)
+	var stripes := 7
+	for i in stripes:
+		var x0 := body.position.x + body.size.x * float(i) / stripes
+		var x1 := body.position.x + body.size.x * float(i + 1) / stripes
+		var col := TENT_STRIPE if i % 2 == 0 else TENT_CREAM
+		DrawKit.clipped_polygon(ci, PackedVector2Array([
+			Vector2(x0, body.position.y), Vector2(x1, body.position.y),
+			Vector2(x1, body.end.y), Vector2(x0, body.end.y)]), clip, col)
+	# Tejado triangular y faldón blanco.
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(body.position.x - 16.0, body.position.y),
+		Vector2(body.end.x + 16.0, body.position.y),
+		Vector2(cx, body.position.y - 78.0)]), clip, TENT_STRIPE)
+	ci.draw_line(Vector2(body.position.x - 16.0, body.position.y),
+			Vector2(body.end.x + 16.0, body.position.y), Color.WHITE, 5.0, true)
+	# Entrada.
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(cx - 34.0, body.end.y), Vector2(cx - 34.0, body.end.y - 54.0),
+		Vector2(cx + 34.0, body.end.y - 54.0), Vector2(cx + 34.0, body.end.y)]),
+		clip, Color(TENT_CREAM, 0.85))
+	# Mástil y banderín.
+	ci.draw_line(Vector2(cx, body.position.y - 78.0), Vector2(cx, body.position.y - 112.0),
+			Color(WiiTheme.TEXT_SOFT, 0.7), 3.0)
+	ci.draw_colored_polygon(PackedVector2Array([
+		Vector2(cx, body.position.y - 112.0), Vector2(cx + 30.0, body.position.y - 102.0),
+		Vector2(cx, body.position.y - 92.0)]), Color("ffe08a"))
+
+
+## Guirnalda de banderines de colores pastel arriba del todo.
+func _draw_bunting(ci: CanvasItem) -> void:
+	var x0 := ARENA.position.x + 24.0
+	var x1 := ARENA.end.x - 24.0
+	var y0 := ARENA.position.y + 26.0
+	var sag := 52.0
+	var pts := PackedVector2Array()
+	var n := 16
+	for i in n + 1:
+		var t := float(i) / n
+		pts.append(Vector2(lerpf(x0, x1, t), y0 + sin(t * PI) * sag))
+	ci.draw_polyline(pts, Color(WiiTheme.TEXT_SOFT, 0.5), 2.0, true)
+	for i in 14:
+		var t := (float(i) + 0.5) / 14.0
+		var p := Vector2(lerpf(x0, x1, t), y0 + sin(t * PI) * sag)
+		var col: Color = BUNTING_COLORS[i % BUNTING_COLORS.size()]
+		ci.draw_colored_polygon(PackedVector2Array([
+			p + Vector2(-13.0, 0.0), p + Vector2(13.0, 0.0), p + Vector2(0.0, 27.0)]), col)
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
+func _draw() -> void:
+	_draw_ambient()
 	for b in _balloons:
 		_draw_balloon(b)
 		_draw_pump(b)
@@ -124,6 +213,21 @@ func _draw() -> void:
 		draw_arc(f[0], 40.0 + t * 190.0, 0.0, TAU, 40, Color(f[2], 1.0 - t), 6.0 * (1.0 - t) + 1.0)
 	for c in _confetti:
 		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)), Color(c[2], clampf(c[3] * 2.5, 0.0, 1.0)))
+
+
+## Globos sueltos que suben despacio al fondo (ambiente barato y translúcido).
+func _draw_ambient() -> void:
+	for i in AMBIENT_BALLOONS.size():
+		var a: Array = AMBIENT_BALLOONS[i]
+		var t := fposmod(_time * float(a[1]) + float(a[2]), 1.0)
+		var p := Vector2(ARENA.position.x + ARENA.size.x * float(a[0]) + sin(t * TAU) * 26.0,
+				ARENA.position.y + 60.0 + (ARENA.size.y - 120.0) * (1.0 - t))
+		var col: Color = AMBIENT_COLORS[i % AMBIENT_COLORS.size()]
+		# Se desvanecen al aparecer por abajo y al perderse arriba.
+		var fade := clampf(sin(t * PI), 0.0, 1.0)
+		DrawKit.ellipse(self, p, Vector2(15.0, 19.0), Color(col, 0.34 * fade))
+		draw_circle(p + Vector2(-5.0, -7.0), 5.0, Color(1, 1, 1, 0.25 * fade))
+		draw_line(p + Vector2(0, 19.0), p + Vector2(0, 33.0), Color(1, 1, 1, 0.25 * fade), 2.0, true)
 
 
 func _draw_balloon(b: Balloon) -> void:

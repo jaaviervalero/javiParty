@@ -18,6 +18,12 @@ const INVULN_TIME := 1.5
 const TARGET_RADIUS := 26.0
 const TARGET_SPEED := 170.0
 const EDGE := 34.0
+# Ambiente: cajón de arena del jardín.
+const SAND_TOP := Color("f9ecc4")
+const SAND_BOTTOM := Color("ecd39b")
+const SAND_MARK := Color("dcc287")
+const PEBBLE := Color("c9b184")
+const POLLEN := Color("fff3c4")
 
 
 ## Un tanque y su estado (sin nodos).
@@ -368,14 +374,49 @@ func _inside_depth(center: Vector2, rect: Rect2) -> float:
 
 # --- Dibujo ---
 
-func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
-	# Suelo de la arena, un pelín más oscuro.
-	draw_rect(ARENA.grow(-10.0), Color("f2f6f8"))
+## Ambiente fijo: cajón de arena del jardín. Se pinta una vez.
+func _draw_scenery(ci: CanvasItem) -> void:
+	DrawKit.arena_frame(ci, ARENA, SAND_TOP, SAND_BOTTOM)
+	# Huellas y piedrecitas repartidas (semilla fija: siempre las mismas).
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 13
+	for i in 8:
+		var p := Vector2(rng.randf_range(ARENA.position.x + 90.0, ARENA.end.x - 90.0),
+				rng.randf_range(ARENA.position.y + 90.0, ARENA.end.y - 70.0))
+		var dir := Vector2.RIGHT.rotated(rng.randf() * TAU)
+		for k in 2:
+			DrawKit.ellipse(ci, p + dir * (k * 18.0 - 9.0), Vector2(8.0, 4.5), Color(SAND_MARK, 0.5))
+	for i in 26:
+		var p := Vector2(rng.randf_range(ARENA.position.x + 40.0, ARENA.end.x - 40.0),
+				rng.randf_range(ARENA.position.y + 40.0, ARENA.end.y - 30.0))
+		ci.draw_circle(p, rng.randf_range(1.6, 3.4), Color(PEBBLE, rng.randf_range(0.45, 0.8)))
+	# Matas de hierba en los bordes del cajón.
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 34.0, ARENA.end.y - 16.0),
+			Vector2(ARENA.end.x - 34.0, ARENA.end.y - 16.0), 20, DrawKit.GRASS_DARK, 5)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 42.0, ARENA.position.y + 30.0),
+			Vector2(ARENA.position.x + 250.0, ARENA.position.y + 30.0), 6, DrawKit.GRASS_DARK, 9)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.end.x - 250.0, ARENA.position.y + 30.0),
+			Vector2(ARENA.end.x - 42.0, ARENA.position.y + 30.0), 6, DrawKit.GRASS_DARK, 21)
+	# Bloques de madera: se crean en _setup y no cambian durante la partida.
 	for blk in _blocks:
-		var st := WiiTheme.panel_style(14, Color("b9c6d0"), Color("dbe4ea"))
-		st.shadow_size = 3
-		draw_style_box(st, blk)
+		_draw_block(ci, blk)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Bloque de madera de juguete: canto oscuro, cara clara y brillo arriba.
+func _draw_block(ci: CanvasItem, blk: Rect2) -> void:
+	DrawKit.soft_shadow(ci, Vector2(blk.get_center().x, blk.end.y + 4.0), blk.size.x * 0.8, 0.55)
+	ci.draw_colored_polygon(DrawKit.rounded_rect_points(blk.grow(4.0), 12.0), DrawKit.WOOD_DARK)
+	ci.draw_colored_polygon(DrawKit.rounded_rect_points(blk, 10.0), DrawKit.WOOD)
+	ci.draw_line(blk.position + Vector2(8.0, 8.0), Vector2(blk.end.x - 8.0, blk.position.y + 8.0),
+			Color(1, 1, 1, 0.35), 5.0, true)
+	ci.draw_line(Vector2(blk.position.x + 8.0, blk.get_center().y + 2.0),
+			Vector2(blk.end.x - 8.0, blk.get_center().y + 2.0), Color(DrawKit.WOOD_DARK, 0.35), 2.0)
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
+func _draw() -> void:
+	_draw_pollen()
 	for tg in _targets:
 		_draw_target(tg[0])
 	for t in _tanks:
@@ -386,6 +427,16 @@ func _draw() -> void:
 		draw_circle(b.pos + Vector2(-1.5, -1.5), BULLET_RADIUS * 0.4, Color(1, 1, 1, 0.7))
 	for c in _confetti:
 		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+
+
+## Polen flotando: tres motas baratas para dar vida al jardín.
+func _draw_pollen() -> void:
+	for i in 3:
+		var t := _time * 0.22 + float(i) * 2.3
+		var p := Vector2(ARENA.position.x + fposmod(t * 150.0 + float(i) * 380.0, ARENA.size.x),
+				ARENA.position.y + 150.0 + float(i) * 150.0 + sin(t * 1.8) * 46.0)
+		draw_circle(p, 6.0, Color(POLLEN, 0.22))
+		draw_circle(p, 3.0, Color(POLLEN, 0.75))
 
 
 func _draw_tank(t: Tank) -> void:
@@ -399,8 +450,8 @@ func _draw_tank(t: Tank) -> void:
 	var blink := t.invuln > 0.0 and int(t.invuln * 10.0) % 2 == 0
 	if blink:
 		col = col.lerp(Color.WHITE, 0.65)
-	# Sombra.
-	draw_circle(t.pos + Vector2(0, 5), TANK_RADIUS, WiiTheme.SHADOW)
+	# Sombra difusa de tanque de juguete.
+	DrawKit.soft_shadow(self, t.pos + Vector2(0, 6), TANK_RADIUS * 2.0)
 	# Cañón detrás del cuerpo.
 	var ret := t.recoil * 6.0
 	var muzzle := t.pos + t.aim * (TANK_RADIUS + 14.0 - ret)

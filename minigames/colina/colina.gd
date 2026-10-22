@@ -16,6 +16,15 @@ const ZONE_WARN := 1.5
 const ZONE_EDGE_MARGIN := 12.0  # distancia mínima de la zona al borde de la arena
 const ZONE_MIN_JUMP := 380.0     # la zona nueva aparece al menos así de lejos
 const TICK := 0.5
+# Ambiente: pradera en primavera.
+const MEADOW_TOP := Color("b9e59b")
+const MEADOW_BOTTOM := Color("8ed16f")
+const PATCH_DARK := Color("7cc45e")
+const PATCH_LIGHT := Color("c6ea9f")
+const PATH := Color("e8d6a8")
+const BUSH := Color("6fb851")
+const ZONE_GOLD := Color("ffd34d")
+const ZONE_CYAN := Color("6fe3f5")
 
 
 class Ball:
@@ -195,14 +204,74 @@ func _update_effects(delta: float) -> void:
 
 # --- Dibujo ---
 
+## Ambiente fijo: pradera en primavera. Se pinta una vez.
+func _draw_scenery(ci: CanvasItem) -> void:
+	DrawKit.arena_frame(ci, ARENA, MEADOW_TOP, MEADOW_BOTTOM)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4
+	# Manchas suaves de césped de dos tonos.
+	for i in 10:
+		var p := Vector2(rng.randf_range(ARENA.position.x + 60.0, ARENA.end.x - 60.0),
+				rng.randf_range(ARENA.position.y + 60.0, ARENA.end.y - 60.0))
+		var radii := Vector2(rng.randf_range(90.0, 210.0), rng.randf_range(40.0, 80.0))
+		var col := PATCH_DARK if i % 2 == 0 else PATCH_LIGHT
+		DrawKit.ellipse(ci, p, radii, Color(col, 0.32))
+	_draw_path(ci)
+	# Matas en los bordes y flores repartidas (siempre las mismas).
+	for i in 9:
+		var t := float(i) / 8.0
+		var p := Vector2(lerpf(ARENA.position.x + 50.0, ARENA.end.x - 50.0, t),
+				ARENA.position.y + 40.0 if i % 2 == 0 else ARENA.end.y - 42.0)
+		DrawKit.ellipse(ci, p + Vector2(0, 6.0), Vector2(30.0, 10.0), Color(BUSH, 0.25))
+		ci.draw_circle(p, 20.0, BUSH)
+		ci.draw_circle(p + Vector2(-12.0, -4.0), 13.0, Color(BUSH, 0.85))
+		ci.draw_circle(p + Vector2(11.0, -6.0), 11.0, Color(PATCH_DARK, 0.9))
+		ci.draw_circle(p + Vector2(-2.0, -12.0), 7.0, Color(1, 1, 1, 0.18))
+	for i in 16:
+		var p := Vector2(rng.randf_range(ARENA.position.x + 70.0, ARENA.end.x - 70.0),
+				rng.randf_range(ARENA.position.y + 80.0, ARENA.end.y - 70.0))
+		var petal := Color.WHITE if i % 3 == 0 else Color("ffd1e3") if i % 3 == 1 else Color("ffe9a8")
+		DrawKit.flower(ci, p, rng.randf_range(5.0, 8.0), petal)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 36.0, ARENA.end.y - 18.0),
+			Vector2(ARENA.end.x - 36.0, ARENA.end.y - 18.0), 16, DrawKit.GRASS_DARK, 8)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Camino de tierra que cruza la pradera por abajo.
+func _draw_path(ci: CanvasItem) -> void:
+	var steps := 16
+	var base_y := ARENA.end.y - 110.0
+	var pts := PackedVector2Array()
+	for i in steps + 1:
+		var t := float(i) / steps
+		pts.append(Vector2(ARENA.position.x - 10.0 + (ARENA.size.x + 20.0) * t,
+				base_y + sin(t * TAU * 0.8) * 46.0 - 30.0))
+	for i in steps + 1:
+		var t := 1.0 - float(i) / steps
+		pts.append(Vector2(ARENA.position.x - 10.0 + (ARENA.size.x + 20.0) * t,
+				base_y + sin(t * TAU * 0.8) * 46.0 + 30.0))
+	DrawKit.clipped_polygon(ci, pts, DrawKit.rounded_rect_points(ARENA, 30), Color(PATH, 0.55))
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
-	draw_rect(ARENA.grow(-10.0), Color("f2f6f8"))
+	_draw_petals()
 	_draw_zone()
 	for b in _balls:
 		_draw_ball(b)
 	for c in _confetti:
 		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+
+
+## Pétalos que flotan despacio: cuatro, baratos.
+func _draw_petals() -> void:
+	for i in 4:
+		var t := _time * 0.3 + float(i) * 1.7
+		var p := Vector2(ARENA.position.x + fposmod(t * 110.0 + float(i) * 300.0, ARENA.size.x),
+				ARENA.position.y + 90.0 + fposmod(t * 46.0 + float(i) * 170.0, ARENA.size.y - 140.0))
+		draw_set_transform(p, sin(t) * 0.9, Vector2(1.0, 0.55))
+		draw_circle(Vector2.ZERO, 5.0, Color("ffd1e3", 0.8))
+		draw_set_transform(Vector2.ZERO)
 
 
 func _draw_zone() -> void:
@@ -211,8 +280,19 @@ func _draw_zone() -> void:
 		ring_col = _ring_player.color
 	elif _contested:
 		ring_col = Color("e25555")
-	# Relleno suave que late.
-	var pulse := 1.0 + sin(_time * 4.0) * 0.03
+	# Halo dorado que late: la zona tiene que verse desde el sofá.
+	var pulse := 1.0 + sin(_time * 3.2) * 0.05
+	var glow := ZONE_RADIUS * pulse
+	draw_circle(_zone_pos, glow * 1.30, Color(ZONE_GOLD, 0.10))
+	draw_circle(_zone_pos, glow * 1.12, Color(ZONE_GOLD, 0.16))
+	draw_circle(_zone_pos, glow * 0.88, Color(1.0, 0.96, 0.74, 0.32))
+	# Aros cian girando por fuera del dorado.
+	var spin := _time * 0.7
+	draw_arc(_zone_pos, glow + 18.0, spin, spin + TAU * 0.72, 40, Color(ZONE_CYAN, 0.55), 4.0, true)
+	draw_arc(_zone_pos, glow + 27.0, -spin * 0.8, -spin * 0.8 + TAU * 0.5, 36,
+			Color(ZONE_CYAN, 0.3), 3.0, true)
+	draw_arc(_zone_pos, glow + 6.0, 0, TAU, 48, Color(ZONE_GOLD, 0.95), 6.0, true)
+	# Relleno del estado (jugador, disputada...).
 	draw_circle(_zone_pos, ZONE_RADIUS * pulse, Color(ring_col, 0.13))
 	draw_circle(_zone_pos, ZONE_RADIUS * 0.72, Color(ring_col, 0.10))
 	var lw := 8.0
