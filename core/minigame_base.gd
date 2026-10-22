@@ -61,6 +61,7 @@ var _state_time := 0.0
 var _last_tick := -1
 var _placements: Array = []
 var _pause_box: Control
+var _scenery: Node2D
 
 
 # =====================================================================
@@ -92,6 +93,13 @@ func _game_end() -> void:
 func format_score(value) -> String:
 	return str(int(value))
 
+## Escenario ESTÁTICO (cielo, suelo, decorado, panel de la arena...). Se dibuja una
+## vez, detrás de _draw(), y solo se repite al llamar a redraw_scenery(). Dibuja sobre
+## `ci` (ci.draw_rect..., DrawKit.cloud(ci, ...)), no sobre self. Así _draw(), que va
+## cada frame, solo pinta lo que se mueve: clave para que vaya fluido en la tele.
+func _draw_scenery(_ci: CanvasItem) -> void:
+	pass
+
 
 # =====================================================================
 # API para los juegos
@@ -113,6 +121,11 @@ func set_score(p: Player, value) -> void:
 
 func get_score(p: Player):
 	return scores.get(p.index, 0)
+
+
+## Vuelve a dibujar el escenario estático (si ha cambiado algo de él).
+func redraw_scenery() -> void:
+	_scenery.queue_redraw()
 
 
 ## Termina la partida ya (p. ej. solo queda uno vivo).
@@ -157,6 +170,11 @@ func _ready() -> void:
 		bg_layer.layer = -1
 		bg_layer.add_child(WiiBackground.new())
 		add_child(bg_layer)
+	# Capa del escenario estático: hija que se pinta detrás del propio juego.
+	_scenery = Node2D.new()
+	_scenery.show_behind_parent = true
+	_scenery.draw.connect(func() -> void: _draw_scenery(_scenery))
+	add_child(_scenery)
 	_hud = CanvasLayer.new()
 	_hud.layer = 10
 	add_child(_hud)

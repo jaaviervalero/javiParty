@@ -22,6 +22,7 @@ léelo entero antes de empezar y copia su estructura.
 ```
 minigames/<id>/<id>.tscn   # nodo raíz Node2D con el script <id>.gd
 minigames/<id>/<id>.gd     # extends MinigameBase
+minigames/<id>/thumb.gd    # miniatura del selector (ver docs/ESTETICA.md)
 minigames/<id>/*.gd        # (opcional) scripts auxiliares, cargados con preload()
 ```
 
@@ -54,7 +55,8 @@ El juego **solo** sobrescribe estos hooks:
 | `_game_process(delta)` | cada frame jugando | **toda** la lógica |
 | `_game_end()` | al acabar | último ajuste de `scores` |
 | `format_score(v)` | HUD y resultados | p. ej. `"%.2f s" % v` |
-| `_draw()` | cada frame (la base llama a `queue_redraw()`) | dibujar |
+| `_draw_scenery(ci)` | una vez (y con `redraw_scenery()`) | escenario estático, dibujando sobre `ci` |
+| `_draw()` | cada frame (la base llama a `queue_redraw()`) | dibujar lo que se mueve |
 
 Prohibido definir `_ready`, `_process`, `_physics_process`, `_input` o `_unhandled_input`.
 
@@ -100,8 +102,10 @@ basta con `just_pressed(Pad.LEFT)`.
 
 ## 6. Estilo visual
 
-- Fondo: lo pone la base (claro con rayas). Encima, el área de juego como panel blanco
-  redondeado: `draw_style_box(WiiTheme.panel_style(30), ARENA)` o similar.
+**Lee `docs/ESTETICA.md`**: cada juego tiene su ambiente, con `DrawKit` y `_draw_scenery`.
+
+- Fondo general: lo pone la base (claro con rayas). Encima, la arena con su ambiente:
+  `DrawKit.arena_frame(ci, ARENA, cielo, suelo)` ... decorado ... `DrawKit.arena_border(ci, ARENA)`.
 - Colores: `p.color` para todo lo de cada jugador; `WiiTheme.TEXT`, `TEXT_SOFT`, `ACCENT`,
   `ACCENT_DARK`, `PANEL_BORDER`, `SHADOW`. Amarillo `Color("ffd34d")` para premios y rojo
   suave `Color("e25555")` para peligro.

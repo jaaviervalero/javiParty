@@ -3,6 +3,7 @@ extends MinigameBase
 ## "Estrellas": cada jugador es una bola; recoge más estrellas que nadie.
 ## Stick o cruceta para moverse, A para un impulso, B para una onda que empuja.
 ## Todo se dibuja en _draw (sin nodos por entidad) y toda la lógica va en _game_process.
+## El decorado fijo (jardín al anochecer) va en _draw_scenery, que se pinta UNA vez.
 
 const RADIUS := 34.0
 const MAX_SPEED := 420.0      # px/s
@@ -14,6 +15,12 @@ const WAVE_RADIUS := 260.0
 const WAVE_PUSH := 900.0
 const STAR_COUNT := 4
 const STAR_RADIUS := 22.0
+# Ambiente: jardín al anochecer.
+const SKY_TOP := Color("a7b6f2")
+const SKY_BOTTOM := Color("f3d9ec")
+const HILL_FAR := Color("c7b5ea")
+const HILL_NEAR := Color("b3dc9c")
+const MOON := Color("fff6d8")
 
 
 ## Estado de cada jugador: una clase interna simple, sin nodos.
@@ -171,10 +178,38 @@ func _update_effects(delta: float) -> void:
 	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
 
 
-# --- Dibujo: MinigameBase llama a queue_redraw() cada frame ---
+# --- Dibujo ---
 
+## Decorado estático: se dibuja una sola vez (ver MinigameBase._draw_scenery).
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, SKY_TOP, SKY_BOTTOM)
+	# Estrellitas de fondo fijas (semilla fija: siempre el mismo cielo).
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in 46:
+		var p := Vector2(rng.randf_range(ARENA.position.x + 30, ARENA.end.x - 30),
+				rng.randf_range(ARENA.position.y + 24, ARENA.position.y + ARENA.size.y * 0.55))
+		ci.draw_circle(p, rng.randf_range(1.5, 3.2), Color(1, 1, 1, rng.randf_range(0.5, 0.9)))
+	var moon := Vector2(ARENA.end.x - 130, ARENA.position.y + 90)
+	ci.draw_circle(moon, 62, Color(MOON, 0.25))
+	ci.draw_circle(moon, 46, MOON)
+	ci.draw_circle(moon + Vector2(-14, -8), 9, Color(0.85, 0.8, 0.7, 0.35))
+	ci.draw_circle(moon + Vector2(12, 14), 6, Color(0.85, 0.8, 0.7, 0.35))
+	DrawKit.cloud(ci, Vector2(ARENA.position.x + 210, ARENA.position.y + 120), 1.2, Color(1, 1, 1, 0.55))
+	DrawKit.cloud(ci, Vector2(ARENA.get_center().x + 120, ARENA.position.y + 70), 0.8, Color(1, 1, 1, 0.45))
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 150, 40, HILL_FAR, 0.6, 1.8, clip)
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 80, 26, HILL_NEAR, 2.2, 1.4, clip)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 40, ARENA.end.y - 30),
+			Vector2(ARENA.end.x - 40, ARENA.end.y - 30), 22, DrawKit.GRASS_DARK, 3)
+	for i in 7:
+		DrawKit.flower(ci, Vector2(ARENA.position.x + 120 + i * 170, ARENA.end.y - 46 + (i % 2) * 18), 5,
+				Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
+	DrawKit.arena_border(ci, ARENA)
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
 	for i in _stars.size():
 		var s := 1.0 + sin(_time * 4.0 + i) * 0.08
 		if _star_anim[i] > 0.0:
