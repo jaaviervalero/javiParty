@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>javiParty · Minijuegos con el móvil como mando</title>
+<meta name="description" content="18 minijuegos para hasta 4 jugadores. Se juega en la tele (Android TV) o en el PC (Windows), y cada uno usa su móvil como mando.">
+<meta name="theme-color" content="#fbfcfd">
+<meta property="og:title" content="javiParty">
+<meta property="og:description" content="18 minijuegos para hasta 4 jugadores, con el móvil como mando.">
+<meta property="og:image" content="https://jaaviervalero.github.io/javiParty/img/globos.webp">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#">
+    <img src="img/icon-192.png" alt="" width="40" height="40">
+    <span><span class="javi">javi</span><b>Party</b></span>
+  </a>
+  <nav class="top-links">
+    <a href="#tele"><span class="es">Tele</span><span class="en">TV</span></a>
+    <a href="#pc">PC</a>
+    <a href="#mandos"><span class="es">Mandos</span><span class="en">Controllers</span></a>
+    <a href="#ayuda"><span class="es">Ayuda</span><span class="en">Help</span></a>
+  </nav>
+  <button id="lang" class="lang" type="button" aria-label="Idioma / Language">EN</button>
+</header>
+
+<main>
+  <!-- ===== Portada ===== -->
+  <section class="hero">
+    <div class="hero-text">
+      <p class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></p>
+      <h1>
+        <span class="es">Fiesta de minijuegos con el móvil como mando</span>
+        <span class="en">A party of minigames with your phone as the controller</span>
+      </h1>
+      <p class="lead">
+        <span class="es">18 minijuegos para 1 a 4 jugadores. Se juega en la tele o en el PC, y cada uno usa su móvil.</span>
+        <span class="en">18 minigames for 1 to 4 players. Play on the TV or on a PC, and everyone uses their own phone.</span>
+      </p>
+      <div class="cta">
+        <a class="btn tv" href="#tele">📺 <span class="es">En la tele</span><span class="en">On the TV</span><small>Android TV</small></a>
+        <a class="btn pc" href="#pc">💻 <span class="es">En el PC</span><span class="en">On a PC</span><small>Windows</small></a>
+      </div>
+      <p class="soon">🌐 <span class="es">Muy pronto: jugar en el navegador, sin instalar nada.</span><span class="en">Coming soon: play in the browser, nothing to install.</span></p>
+      <p id="mobileNote" class="note hidden">
+        📱 <span class="es">Estás en un móvil: el juego se instala en la <b>tele</b> o en el <b>PC</b>. En el móvil solo hace falta el <a href="#mandos">mando</a>.</span>
+        <span class="en">You're on a phone: the game goes on the <b>TV</b> or the <b>PC</b>. On the phone you only need the <a href="#mandos">controller</a>.</span>
+      </p>
+    </div>
+    <figure class="screen">
+      <img src="img/globos.webp" alt="Infla el globo: cuatro jugadores compiten" width="1280" height="720">
+    </figure>
+  </section>
+
+  <!-- ===== Cómo funciona ===== -->
+  <section class="how">
+    <h2><span class="es">Así se juega</span><span class="en">How it works</span></h2>
+    <ol class="steps three">
+      <li style="--c:#2fa8e0">
+        <b>1</b>
+        <h3><span class="es">Instálalo una vez</span><span class="en">Install it once</span></h3>
+        <p><span class="es">En la tele con Android TV o en un PC con Windows. Es gratis.</span><span class="en">On an Android TV or a Windows PC. It's free.</span></p>
+      </li>
+      <li style="--c:#ec5a5a">
+        <b>2</b>
+        <h3><span class="es">Cada uno, su móvil</span><span class="en">Everyone grabs a phone</span></h3>
+        <p><span class="es">Con la app del mando, en el mismo Wi-Fi. Aparece cada uno con su color.</span><span class="en">With the controller app, on the same Wi-Fi. Each player gets a colour.</span></p>
+      </li>
+      <li style="--c:#4cbf6b">
+        <b>3</b>
+        <h3><span class="es">¡A jugar!</span><span class="en">Play!</span></h3>
+        <p><span class="es">Partidas de un minuto: sumo, globos, tanques, pintar el suelo… y 14 más.</span><span class="en">One-minute rounds: sumo, balloons, tanks, paint the floor… and 14 more.</span></p>
+      </li>
+    </ol>
+    <div class="gallery">
+      <img src="img/select.webp" alt="Selector de minijuegos" loading="lazy" width="1280" height="720">
+      <img src="img/sumo.webp" alt="Sumo de bolas" loading="lazy" width="1280" height="720">
+      <img src="img/pintura.webp" alt="Pinta el suelo" loading="lazy" width="1280" height="720">
+      <img src="img/tanques.webp" alt="Tanquecitos" loading="lazy" width="1280" height="720">
+    </div>
+  </section>
+
+  <!-- ===== Tele ===== -->
+  <section id="tele" class="card-section">
+    <div class="section-head">
+      <span class="emoji">📺</span>
+      <div>
+        <h2><span class="es">Instalar en la tele</span><span class="en">Install on the TV</span></h2>
+        <p class="sub"><span class="es">Teles y boxes con <b>Android TV</b> o <b>Google TV</b> (TCL, Sony, Philips, Xiaomi Mi Box, Chromecast con Google TV…). Unos 5 minutos, solo la primera vez.</span><span class="en">TVs and boxes with <b>Android TV</b> or <b>Google TV</b> (TCL, Sony, Philips, Xiaomi Mi Box, Chromecast with Google TV…). About 5 minutes, only the first time.</span></p>
+      </div>
+    </div>
+
+    <ol class="steps">
+      <li style="--c:#2fa8e0">
+        <b>1</b>
+        <h3><span class="es">Instala la app «Downloader»</span><span class="en">Install the "Downloader" app</span></h3>
+        <p><span class="es">En la tele, abre <b>Google Play</b>, busca <b>Downloader</b> (el icono naranja de AFTVnews) e instálala.</span><span class="en">On the TV, open <b>Google Play</b>, search for <b>Downloader</b> (the orange icon by AFTVnews) and install it.</span></p>
+      </li>
+      <li style="--c:#ec5a5a">
+        <b>2</b>
+        <h3><span class="es">Dale permiso para instalar</span><span class="en">Let it install apps</span></h3>
+        <p><span class="es">Ve a <b>Ajustes → Preferencias del dispositivo → Seguridad y restricciones → Fuentes desconocidas</b> y activa <b>Downloader</b>. (En algunas teles está en <i>Privacidad</i> o <i>Apps</i>; si la tele te lo pregunta al instalar, di que sí.)</span><span class="en">Go to <b>Settings → Device Preferences → Security &amp; restrictions → Unknown sources</b> and turn on <b>Downloader</b>. (On some TVs it's under <i>Privacy</i> or <i>Apps</i>; if the TV asks while installing, say yes.)</span></p>
+      </li>
+      <li style="--c:#4cbf6b">
+        <b>3</b>
+        <h3><span class="es">Escribe esto en Downloader</span><span class="en">Type this into Downloader</span></h3>
+        <div id="dlCode" class="code-box hidden">
+          <span class="es">Código</span><span class="en">Code</span>
+          <strong id="dlCodeValue"></strong>
+        </div>
+        <div class="url-box">
+          <code id="apkUrl">github.com/jaaviervalero/javiParty/releases/latest/download/javiParty-androidtv.apk</code>
+          <button class="copy" type="button" data-copy="https://github.com/jaaviervalero/javiParty/releases/latest/download/javiParty-androidtv.apk"><span class="es">Copiar</span><span class="en">Copy</span></button>
+        </div>
+        <p class="small-note"><span class="es">Pulsa <b>Ir</b>, espera a que baje y pulsa <b>Instalar</b>.</span><span class="en">Press <b>Go</b>, wait for the download and press <b>Install</b>.</span></p>
+      </li>
+      <li style="--c:#f2a33a">
+        <b>4</b>
+        <h3><span class="es">Ábrela desde «Aplicaciones»</span><span class="en">Open it from "Apps"</span></h3>
+        <p><span class="es">javiParty aparece en la <b>lista de aplicaciones</b> de la tele (no en la fila de inicio). Si quieres, puedes añadirla a favoritos.</span><span class="en">javiParty shows up in the TV's <b>app list</b> (not on the home row). You can add it to your favourites.</span></p>
+      </li>
+    </ol>
+
+    <div class="actions">
+      <a class="btn small-btn" href="https://github.com/jaaviervalero/javiParty/releases/latest/download/javiParty-androidtv.apk">⬇ <span class="es">Descargar el APK</span><span class="en">Download the APK</span> <small>27 MB</small></a>
+    </div>
+    <details>
+      <summary><span class="es">¿Tienes un ordenador? Instalar con ADB (avanzado)</span><span class="en">Got a computer? Install with ADB (advanced)</span></summary>
+      <p><span class="es">Activa la depuración en <i>Opciones de desarrollador</i> de la tele y, desde el ordenador:</span><span class="en">Turn on debugging in the TV's <i>Developer options</i> and, from the computer:</span></p>
+      <pre>adb connect &lt;IP-de-la-tele&gt;:5555
+adb install -r javiParty-androidtv.apk</pre>
+    </details>
+  </section>
+
+  <!-- ===== PC ===== -->
+  <section id="pc" class="card-section">
+    <div class="section-head">
+      <span class="emoji">💻</span>
+      <div>
+        <h2><span class="es">Jugar en el PC</span><span class="en">Play on a PC</span></h2>
+        <p class="sub"><span class="es">Windows 10 u 11. No se instala nada: es un solo archivo. Si conectas el PC a la tele por HDMI, mejor.</span><span class="en">Windows 10 or 11. Nothing gets installed: it's a single file. Even better if the PC is plugged into the TV over HDMI.</span></p>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn pc" href="https://github.com/jaaviervalero/javiParty/releases/latest/download/javiParty-windows.exe">⬇ <span class="es">Descargar para Windows</span><span class="en">Download for Windows</span> <small>37 MB</small></a>
+    </div>
+    <ol class="steps">
+      <li style="--c:#2fa8e0">
+        <b>1</b>
+        <h3><span class="es">Abre el archivo</span><span class="en">Open the file</span></h3>
+        <p><span class="es">Doble clic en <b>javiParty-windows.exe</b> (estará en <i>Descargas</i>).</span><span class="en">Double-click <b>javiParty-windows.exe</b> (it'll be in <i>Downloads</i>).</span></p>
+      </li>
+      <li style="--c:#ec5a5a">
+        <b>2</b>
+        <h3><span class="es">Si sale un aviso azul</span><span class="en">If a blue warning appears</span></h3>
+        <div class="mock smartscreen" aria-hidden="true">
+          <b><span class="es">Windows protegió su PC</span><span class="en">Windows protected your PC</span></b>
+          <u><span class="es">Más información</span><span class="en">More info</span></u>
+          <em><span class="es">Ejecutar de todas formas</span><span class="en">Run anyway</span></em>
+        </div>
+        <p><span class="es">Pulsa <b>Más información</b> y luego <b>Ejecutar de todas formas</b>. Sale porque el juego no está firmado (eso cuesta dinero), no porque haga nada raro.</span><span class="en">Click <b>More info</b> and then <b>Run anyway</b>. It shows up because the game isn't signed (that costs money), not because it does anything odd.</span></p>
+      </li>
+      <li style="--c:#4cbf6b">
+        <b>3</b>
+        <h3><span class="es">Permite la red</span><span class="en">Allow network access</span></h3>
+        <p><span class="es">Windows preguntará por el <b>firewall</b>: pulsa <b>Permitir</b>. Si no, los móviles no podrán conectarse.</span><span class="en">Windows will ask about the <b>firewall</b>: click <b>Allow</b>. Otherwise the phones can't connect.</span></p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ===== Mandos ===== -->
+  <section id="mandos" class="card-section">
+    <div class="section-head">
+      <span class="emoji">📱</span>
+      <div>
+        <h2><span class="es">Preparar el móvil (el mando)</span><span class="en">Set up your phone (the controller)</span></h2>
+        <p class="sub"><span class="es">Cada jugador, en su móvil. iPhone o Android.</span><span class="en">Each player, on their own phone. iPhone or Android.</span></p>
+      </div>
+    </div>
+    <ol class="steps">
+      <li style="--c:#2fa8e0">
+        <b>1</b>
+        <h3><span class="es">Instala «DSU Controller»</span><span class="en">Install "DSU Controller"</span></h3>
+        <p><span class="es">Búscala en la <b>App Store</b> (iPhone) o en <b>Google Play</b> (Android). Hace falta la versión 3.0.6 o posterior.</span><span class="en">Search for it on the <b>App Store</b> (iPhone) or <b>Google Play</b> (Android). Version 3.0.6 or later.</span></p>
+        <a class="link-btn" href="https://play.google.com/store/search?q=DSU%20Controller&amp;c=apps">Google Play →</a>
+      </li>
+      <li style="--c:#ec5a5a">
+        <b>2</b>
+        <h3><span class="es">Añade el mando de javiParty</span><span class="en">Add the javiParty controller</span></h3>
+        <p><span class="es">Desde el móvil, pulsa el botón. O, en la app, escanea este código:</span><span class="en">On the phone, tap the button. Or scan this code from inside the app:</span></p>
+        <div class="dsu-add">
+          <a id="dsuLink" class="link-btn" href="dsu-controller://layout?action=add&amp;data=MSwzOTMsODUyLDIKMyxsZWZ0U3RpY2ssLDAsNjQsMjQsMTQxLDE0MSwKMiwsLDAsMTEzLDE1NywyMjAsMjIwLAoxLGNyb3NzLEEsMSw2NTQsMTkyLDEzNCwxMzQsNjc6Njc6Njc6NjcKMSxzcXVhcmUsQiwwLDU2MSw5OSw5OCw5OCw0OTo0OTo0OTo0OQoxLHNoYXJlLC0sMCwzMzIsMTcyLDQ4LDQ4LDI0OjI0OjI0OjI0CjQsaG9tZSwsMSw0MDIsMTcyLDQ4LDQ4LAoxLG9wdGlvbnMsKywwLDQ3MiwxNzIsNDgsNDgsMjQ6MjQ6MjQ6MjQ="><span class="es">Añadir el mando</span><span class="en">Add the controller</span></a>
+          <img src="img/dsu-mando-qr.png" alt="QR del mando de javiParty para DSU Controller" class="pixel" width="150" height="150">
+        </div>
+      </li>
+      <li style="--c:#4cbf6b">
+        <b>3</b>
+        <h3><span class="es">Mismo Wi-Fi que la tele o el PC</span><span class="en">Same Wi-Fi as the TV or PC</span></h3>
+        <p><span class="es">El de casa, <b>no el de invitados</b>. Los datos móviles no valen.</span><span class="en">The home one, <b>not the guest network</b>. Mobile data won't work.</span></p>
+      </li>
+      <li style="--c:#f2a33a">
+        <b>4</b>
+        <h3><span class="es">Abre la app y déjala abierta</span><span class="en">Open the app and keep it open</span></h3>
+        <p><span class="es">Con el juego en marcha, tu móvil aparece solo como Jugador 1, 2, 3 o 4. ¡Ya está!</span><span class="en">With the game running, your phone shows up as Player 1, 2, 3 or 4. Done!</span></p>
+      </li>
+    </ol>
+    <p class="soon">✨ <span class="es">Estamos preparando un mando que funciona <b>sin instalar ninguna app</b>: escaneas un QR de la pantalla con la cámara y a jugar.</span><span class="en">We're working on a controller that needs <b>no app at all</b>: scan a QR on the screen with your camera and play.</span></p>
+  </section>
+
+  <!-- ===== Ayuda ===== -->
+  <section id="ayuda" class="faq">
+    <h2><span class="es">Si algo falla</span><span class="en">Troubleshooting</span></h2>
+    <details>
+      <summary><span class="es">Mi móvil no aparece en el juego</span><span class="en">My phone doesn't show up in the game</span></summary>
+      <ul>
+        <li><span class="es">Comprueba que el móvil está en el <b>mismo Wi-Fi</b> que la tele o el PC (no en el de invitados ni con datos).</span><span class="en">Check the phone is on the <b>same Wi-Fi</b> as the TV or PC (not the guest one, not mobile data).</span></li>
+        <li><span class="es">La app DSU Controller tiene que estar <b>abierta y en pantalla</b>.</span><span class="en">The DSU Controller app must be <b>open and on screen</b>.</span></li>
+        <li><span class="es">En el juego, usa <b>«Añadir IP a mano»</b> y escribe la IP que enseña la app.</span><span class="en">In the game, use <b>"Add IP manually"</b> and type the IP shown in the app.</span></li>
+        <li><span class="es">En el PC: revisa que permitiste el firewall (Configuración → Firewall → Permitir una aplicación).</span><span class="en">On a PC: make sure you allowed it through the firewall (Settings → Firewall → Allow an app).</span></li>
+      </ul>
+    </details>
+    <details>
+      <summary><span class="es">No encuentro el juego en la tele</span><span class="en">I can't find the game on the TV</span></summary>
+      <p><span class="es">No sale en la fila de inicio: está en <b>Aplicaciones</b> (o <i>Mis apps</i>). Desde ahí puedes añadirlo a favoritos.</span><span class="en">It isn't on the home row: look in <b>Apps</b> (or <i>My apps</i>). You can add it to favourites from there.</span></p>
+    </details>
+    <details>
+      <summary><span class="es">¿Cómo me muevo por los menús?</span><span class="en">How do I move around the menus?</span></summary>
+      <p><span class="es">Con el mando de la tele, el teclado del PC (flechas, Enter y Esc) o cualquier móvil: cruceta para moverse, <b>A</b> para aceptar y <b>B</b> para volver. <b>+</b> pausa la partida.</span><span class="en">With the TV remote, the PC keyboard (arrows, Enter, Esc) or any phone: d-pad to move, <b>A</b> to accept, <b>B</b> to go back. <b>+</b> pauses the game.</span></p>
+    </details>
+    <details>
+      <summary><span class="es">¿Es gratis? ¿Es seguro?</span><span class="en">Is it free? Is it safe?</span></summary>
+      <p><span class="es">Sí y sí. Es gratis, sin anuncios ni cuentas, y el código está abierto en <a href="https://github.com/jaaviervalero/javiParty">GitHub</a>. Los avisos de Windows y de la tele salen porque no viene de una tienda oficial.</span><span class="en">Yes and yes. It's free, no ads, no accounts, and the code is open on <a href="https://github.com/jaaviervalero/javiParty">GitHub</a>. The Windows and TV warnings appear because it doesn't come from an official store.</span></p>
+    </details>
+  </section>
+
+  <section class="share">
+    <img src="img/qr-web.svg" alt="QR de esta página" width="120" height="120">
+    <p><span class="es">¿Vas a jugar con alguien? Que escanee esto para preparar su móvil.</span><span class="en">Playing with friends? Have them scan this to set up their phone.</span></p>
+  </section>
+</main>
+
+<footer>
+  <p class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></p>
+  <p>javiParty v1 · <a href="https://github.com/jaaviervalero/javiParty"><span class="es">Código en GitHub</span><span class="en">Code on GitHub</span></a> · <a href="https://github.com/jaaviervalero/javiParty/releases"><span class="es">Todas las versiones</span><span class="en">All releases</span></a></p>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>
