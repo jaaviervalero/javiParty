@@ -8,6 +8,7 @@ config/description="Party game de minijuegos para Android TV con móviles como m
 run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+config/quit_on_go_back=false
 
 [autoload]
 

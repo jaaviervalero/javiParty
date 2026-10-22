@@ -24,6 +24,17 @@ func _ready() -> void:
 	get_tree().root.theme = theme
 
 
+## Botón "atrás" del mando de la tele (Android): en vez de cerrar la app
+## (quit_on_go_back = false), se comporta como ui_cancel (volver / pausa).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		for pressed in [true, false]:
+			var ev := InputEventAction.new()
+			ev.action = "ui_cancel"
+			ev.pressed = pressed
+			Input.parse_input_event(ev)
+
+
 func apply_locale() -> void:
 	var loc := locale
 	if loc == "":

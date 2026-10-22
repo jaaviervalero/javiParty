@@ -11,3 +11,6 @@ __pycache__/
 tools/probe_motion.json
 .claude/
 .claude/
+
+# Exportaciones
+build/
