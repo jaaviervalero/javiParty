@@ -1,0 +1,11 @@
+# Godot
+.godot/
+/android/build/
+*.translation
+export_presets.cfg.bak
+/build/
+
+# Python
+__pycache__/
+*.pyc
+tools/probe_motion.json
