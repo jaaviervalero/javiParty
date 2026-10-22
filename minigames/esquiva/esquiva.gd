@@ -34,6 +34,14 @@ const SWEEP_GAP := 200.0
 const SURVIVOR_BONUS := 5
 const SHOT_COLOR := Color("e25555")
 
+# Ambiente: polideportivo con suelo de parqué y líneas de pista.
+const WOOD_LIGHT := Color("ecd6b0")
+const WOOD_MID := Color("e3c79c")
+const WOOD_JOINT := Color("d3b485")
+const COURT_LINE := Color(1, 1, 1, 0.72)
+const WALL_COLOR := Color("bcd7e6")
+const WALL_DARK := Color("a3c6da")
+
 
 class Sweep:
 	var vertical := true
@@ -73,7 +81,6 @@ var _shot_timer := 1.0
 var _next_sweep := SWEEP_PERIOD
 var _sweep_vertical := true
 var _time := 0.0
-var _panel_style: StyleBoxFlat
 var _sweep_style: StyleBoxFlat
 
 
@@ -91,7 +98,6 @@ func _configure() -> void:
 
 
 func _setup() -> void:
-	_panel_style = WiiTheme.panel_style(30)
 	_sweep_style = StyleBoxFlat.new()
 	_sweep_style.bg_color = Color("e25555")
 	_sweep_style.border_color = Color("c74646")
@@ -367,9 +373,51 @@ func _hit_dodger(d: Dodger) -> void:
 
 # --- Dibujo ---
 
+## Parqué, líneas de pista y pared acolchada: se pinta una sola vez.
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, WOOD_LIGHT, WOOD_MID)
+	# Tablas: bandas horizontales claras con juntas cortas desfasadas.
+	var band := 34.0
+	var top := ARENA.position.y
+	var i := 0
+	while top < ARENA.end.y:
+		var h := minf(band, ARENA.end.y - top)
+		if i % 2 == 0:
+			ci.draw_rect(Rect2(ARENA.position.x, top, ARENA.size.x, h),
+					Color(WOOD_LIGHT.lightened(0.12), 0.6))
+		ci.draw_line(Vector2(ARENA.position.x, top + h), Vector2(ARENA.end.x, top + h),
+				Color(WOOD_JOINT, 0.35), 1.0)
+		var x := ARENA.position.x + (60.0 if i % 2 == 0 else 140.0)
+		while x < ARENA.end.x:
+			ci.draw_line(Vector2(x, top), Vector2(x, top + h), Color(WOOD_JOINT, 0.3), 1.0)
+			x += 220.0
+		top += band
+		i += 1
+	# Líneas de pista: blancas y finas para no competir con los proyectiles.
+	var inner := Rect2(ARENA.position + Vector2(26, 38), ARENA.size - Vector2(52, 64))
+	ci.draw_rect(inner, COURT_LINE, false, 4.0)
+	var mid := inner.get_center()
+	ci.draw_line(Vector2(inner.position.x, mid.y), Vector2(inner.end.x, mid.y), COURT_LINE, 4.0)
+	ci.draw_arc(mid, 74.0, 0.0, TAU, 40, COURT_LINE, 4.0, true)
+	# Pared acolchada en el borde superior.
+	var wall_h := 30.0
+	var wall := PackedVector2Array([
+		ARENA.position, Vector2(ARENA.end.x, ARENA.position.y),
+		Vector2(ARENA.end.x, ARENA.position.y + wall_h),
+		Vector2(ARENA.position.x, ARENA.position.y + wall_h),
+	])
+	DrawKit.clipped_polygon(ci, wall, clip, WALL_COLOR)
+	ci.draw_line(Vector2(ARENA.position.x + 34, ARENA.position.y + wall_h),
+			Vector2(ARENA.end.x - 34, ARENA.position.y + wall_h), Color.WHITE, 3.0)
+	for k in 16:
+		var x := ARENA.position.x + 50.0 + k * 74.0
+		ci.draw_line(Vector2(x, ARENA.position.y + 5.0),
+				Vector2(x, ARENA.position.y + wall_h - 5.0), Color(WALL_DARK, 0.6), 2.0)
+	DrawKit.arena_border(ci, ARENA)
+
+
 func _draw() -> void:
-	draw_style_box(_panel_style, ARENA)
-	_draw_grid()
 	for sweep in _sweeps:
 		_draw_sweep(sweep)
 	for s in _shots:
@@ -380,20 +428,6 @@ func _draw() -> void:
 		_draw_flash(flash)
 	for popup in _popups:
 		_draw_popup(popup)
-
-
-func _draw_grid() -> void:
-	var step := 100.0
-	var x := ARENA.position.x + step
-	while x < ARENA.end.x:
-		draw_line(Vector2(x, ARENA.position.y), Vector2(x, ARENA.end.y),
-				Color(0.2, 0.3, 0.4, 0.05), 2.0)
-		x += step
-	var y := ARENA.position.y + step
-	while y < ARENA.end.y:
-		draw_line(Vector2(ARENA.position.x, y), Vector2(ARENA.end.x, y),
-				Color(0.2, 0.3, 0.4, 0.05), 2.0)
-		y += step
 
 
 func _draw_shot(s: Shot) -> void:

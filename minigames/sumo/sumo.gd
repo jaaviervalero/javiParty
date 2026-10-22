@@ -19,6 +19,14 @@ const SOLO_BOTS := 2
 const FALL_TIME := 0.7
 const BOT_COLOR := Color("aeb8c2")
 
+# Ambiente: plataforma de madera clara flotando sobre un mar de nubes.
+const SKY_TOP := Color("c8ecfb")
+const SKY_BOTTOM := Color("f2fbff")
+const CLOUD_HAZE := Color("dff2fb")
+const PLATFORM_TOP := Color("fbf1dd")
+const PLATFORM_EDGE := Color("dcc6a3")
+const PLATFORM_DANGER := Color("ffe0e0")
+
 
 ## Una bola. player == null en los bots del modo de un jugador.
 class Ball:
@@ -269,8 +277,40 @@ func _update_effects(delta: float) -> void:
 
 # --- Dibujo ---
 
+## Cielo y mar de nubes: se pinta una sola vez (ver MinigameBase._draw_scenery).
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, SKY_TOP, SKY_BOTTOM)
+	DrawKit.sun(ci, Vector2(ARENA.end.x - 120, ARENA.position.y + 76), 30)
+	# Suelo de nubes: dos capas de colinas muy claras recortadas a la arena.
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 92, 30, Color(CLOUD_HAZE, 0.75), 1.4, 1.7, clip)
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 44, 18, Color(1, 1, 1, 0.9), 3.1, 1.3, clip)
+	# Nubes fijas alrededor del centro (que lo ocupa la plataforma).
+	var spots: Array[Vector3] = [
+		Vector3(ARENA.position.x + 150, ARENA.position.y + 250, 1.15),
+		Vector3(ARENA.end.x - 160, ARENA.position.y + 300, 1.0),
+		Vector3(ARENA.position.x + 190, ARENA.end.y - 70, 1.35),
+		Vector3(ARENA.end.x - 200, ARENA.end.y - 90, 1.25),
+	]
+	for s in spots:
+		DrawKit.cloud(ci, Vector2(s.x, s.y), s.z, Color(1, 1, 1, 0.85))
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Nubes que derivan despacio por detrás de la plataforma (lo único animado del fondo).
+func _draw_clouds() -> void:
+	var bases: Array[Vector2] = [
+		Vector2(ARENA.position.x + 170, ARENA.position.y + 150),
+		Vector2(ARENA.end.x - 190, ARENA.position.y + 240),
+		Vector2(ARENA.position.x + 210, ARENA.end.y - 80),
+	]
+	for i in bases.size():
+		var drift := Vector2(sin(_time * 0.12 + i * 1.9) * 34.0, sin(_time * 0.08 + i) * 8.0)
+		DrawKit.cloud(self, bases[i] + drift, 0.75 + i * 0.1, Color(1, 1, 1, 0.7))
+
+
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
+	_draw_clouds()
 	_draw_platform()
 	for r in _rings:
 		var t: float = r[1]
@@ -289,14 +329,21 @@ func _draw() -> void:
 func _draw_platform() -> void:
 	var danger := 1.0 - clampf((_radius - PLATFORM_MIN_RADIUS)
 			/ (PLATFORM_RADIUS - PLATFORM_MIN_RADIUS), 0.0, 1.0)
-	var fill := Color.WHITE.lerp(Color("ffe3e3"), danger * 0.55)
-	draw_circle(_center + Vector2(0, 10), _radius, WiiTheme.SHADOW)
-	draw_circle(_center, _radius, fill)
-	draw_arc(_center, _radius - 2.0, 0.0, TAU, 48, WiiTheme.PANEL_BORDER, 5.0, true)
-	draw_arc(_center, maxf(8.0, _radius - 18.0), 0.0, TAU, 48,
-			Color(WiiTheme.ACCENT, 0.22), 3.0, true)
-	draw_arc(_center, maxf(4.0, _radius * 0.55), 0.0, TAU, 48,
-			Color(WiiTheme.PANEL_BORDER, 0.45), 2.0, true)
+	var top := PLATFORM_TOP.lerp(PLATFORM_DANGER, danger * 0.7)
+	var edge := PLATFORM_EDGE.lerp(PLATFORM_DANGER.darkened(0.08), danger * 0.55)
+	# Sombra en las nubes y canto: dos discos desplazados abajo dan volumen.
+	DrawKit.soft_shadow(self, _center + Vector2(0, _radius * 0.35 + 22.0), _radius * 1.7)
+	draw_circle(_center + Vector2(0, 16.0), _radius - 2.0, edge.darkened(0.12))
+	draw_circle(_center + Vector2(0, 8.0), _radius - 1.0, edge)
+	draw_circle(_center, _radius, top)
+	# Anillos de madera pintada, muy suaves.
+	var rings: Array[float] = [0.36, 0.58, 0.78, 0.94]
+	for f in rings:
+		draw_arc(_center, maxf(8.0, _radius * f), 0.0, TAU, 48,
+				Color(DrawKit.WOOD_DARK, 0.14), 2.0, true)
+	DrawKit.ellipse(self, _center + Vector2(-_radius * 0.3, -_radius * 0.45),
+			Vector2(_radius * 0.46, _radius * 0.2), Color(1, 1, 1, 0.16))
+	draw_arc(_center, _radius - 2.5, 0.0, TAU, 48, Color.WHITE, 5.0, true)
 
 
 func _draw_ball(b: Ball) -> void:
