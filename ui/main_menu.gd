@@ -26,6 +26,7 @@ func _ready() -> void:
 	for ip in Settings.manual_servers:
 		DSUClient.add_server(ip)
 	NetworkScanner.start()
+	WebHub.start()  # se queda abierto durante las partidas (los móviles siguen conectados)
 	_build()
 	PlayerManager.connect("player_joined", self, "_on_player_event", ["join"])
 	PlayerManager.connect("player_reconnected", self, "_on_player_event", ["join"])

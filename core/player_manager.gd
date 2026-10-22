@@ -1,5 +1,5 @@
 extends Node
-## Autoload "PlayerManager": asocia mandos DSU a jugadores 1-4.
+## Autoload "PlayerManager": asocia mandos (DSU y web) a jugadores 1-4.
 ##
 ## - Un mando nuevo ocupa el primer hueco libre.
 ## - Si un mando se desconecta, el jugador conserva su hueco y su puntuación;
@@ -38,6 +38,8 @@ func _ready() -> void:
 	process_priority = -90  # después de DSUClient, antes que las escenas
 	DSUClient.connect("controller_connected", self, "_on_controller_connected")
 	DSUClient.connect("controller_disconnected", self, "_on_controller_disconnected")
+	WebHub.connect("controller_connected", self, "_on_controller_connected")
+	WebHub.connect("controller_disconnected", self, "_on_controller_disconnected")
 
 
 func active_players() -> Array:
@@ -71,6 +73,7 @@ func _on_controller_connected(ctrl) -> void:
 	for p in players:
 		if p != null and p.controller == ctrl:
 			p.device_id = id
+			p.layout = _layout_for(ctrl)
 			emit_signal("player_reconnected", p)
 			return
 	# 2) Mismo dispositivo con otro mando (cambió de IP): solo si ese jugador está
@@ -80,6 +83,7 @@ func _on_controller_connected(ctrl) -> void:
 	for p in players:
 		if p != null and p.device_id == id and not p.is_connected_now():
 			p.controller = ctrl
+			p.layout = _layout_for(ctrl)
 			emit_signal("player_reconnected", p)
 			return
 	for i in MAX_PLAYERS:
@@ -87,10 +91,16 @@ func _on_controller_connected(ctrl) -> void:
 			var p := Player.new(i, COLORS[i], tr("PLAYER_N") % (i + 1))
 			p.device_id = id
 			p.controller = ctrl
+			p.layout = _layout_for(ctrl)
 			players[i] = p
 			emit_signal("player_joined", p)
 			return
 	# Más de 4 mandos: se ignora (sigue visible en el overlay de depuración).
+
+
+## Los mandos web ya mandan botones lógicos; los DSU, los del diseño Wiimote de la app.
+static func _layout_for(ctrl) -> Dictionary:
+	return Pad.LAYOUT_WEB if ctrl is WebPad else Pad.LAYOUT_DSUCONTROLLER_WIIMOTE
 
 
 func _on_controller_disconnected(ctrl) -> void:

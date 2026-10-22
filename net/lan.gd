@@ -24,5 +24,20 @@ static func private_ipv4_prefixes(addresses: PoolStringArray) -> PoolStringArray
 	return out
 
 
+## La IPv4 privada con la que los móviles llegan a este equipo (para el QR del
+## mando web). Prefiere 192.168.x.x, que es la de casi cualquier Wi-Fi de casa;
+## "" si no hay ninguna (sin red).
+static func best_private_ipv4(addresses: PoolStringArray) -> String:
+	var best := ""
+	for addr in addresses:
+		if private_ipv4_prefixes(PoolStringArray([addr])).empty():
+			continue
+		if addr.begins_with("192.168."):
+			return addr
+		if best == "":
+			best = addr
+	return best
+
+
 static func is_ipv4(addr: String) -> bool:
 	return addr.is_valid_ip_address() and addr.split(".").size() == 4

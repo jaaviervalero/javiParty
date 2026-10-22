@@ -1,0 +1,148 @@
+/* Mando web de javiParty. Mismo aire que el juego (WiiTheme): fondo claro,
+   gris suave, cian de acento y el color del jugador. Sin fuentes externas: en la
+   tele el móvil puede no tener internet. */
+:root {
+  --bg-top: #fbfcfd;
+  --bg-bottom: #dbe5ee;
+  --text: #5b6670;
+  --soft: #8a96a1;
+  --accent: #33b5e5;
+  --panel: #ffffff;
+  --border: #d3dde6;
+  --shadow: rgba(60, 80, 100, .18);
+  --player: #33b5e5;
+  --a: #8e4ec6;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: linear-gradient(var(--bg-top), var(--bg-bottom));
+  color: var(--text);
+  font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 700;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  touch-action: none; overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action: none; }
+.hidden { display: none !important; }
+
+/* --- Pantallas de inicio y estado --- */
+.screen {
+  position: fixed; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center;
+}
+.logo { margin: 0; font-size: 52px; font-weight: 900; letter-spacing: -1px; }
+.logo span { color: var(--text); }
+.logo b { color: var(--accent); }
+.dots { display: flex; gap: 12px; margin: 0; }
+.dots i { width: 16px; height: 16px; border-radius: 50%; display: block; }
+.dots i:nth-child(1) { background: #2fa8e0; } .dots i:nth-child(2) { background: #ec5a5a; }
+.dots i:nth-child(3) { background: #4cbf6b; } .dots i:nth-child(4) { background: #f2a33a; }
+.big {
+  min-width: 240px; padding: 20px 32px; border-radius: 40px; font-size: 24px; font-weight: 800;
+  background: var(--accent); color: #fff; box-shadow: 0 6px 0 #1f8fb8, 0 10px 24px var(--shadow);
+}
+.big:active { transform: translateY(4px); box-shadow: 0 2px 0 #1f8fb8, 0 4px 12px var(--shadow); }
+.hint, .status-text { margin: 0; max-width: 340px; color: var(--soft); font-size: 17px; line-height: 1.35; }
+.status-text { color: var(--text); font-size: 21px; }
+.spinner {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 6px solid var(--border); border-top-color: var(--accent);
+  animation: spin .9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Mando --- */
+#pad {
+  position: fixed; inset: 0; display: flex; flex-direction: column;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+}
+.bar { display: flex; align-items: center; gap: 12px; }
+.badge {
+  width: 52px; height: 52px; border-radius: 50%; flex: none;
+  background: var(--player); color: #fff; font-size: 28px; font-weight: 900;
+  display: grid; place-items: center; box-shadow: 0 3px 0 rgba(0,0,0,.15), inset 0 -4px 0 rgba(0,0,0,.08);
+}
+.who { flex: 1; min-width: 0; }
+.player-name { font-size: 20px; font-weight: 900; color: var(--player); }
+.net { font-size: 13px; color: var(--soft); }
+.net::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  margin-right: 6px; background: #4cbf6b; vertical-align: 1px; }
+.net.bad::before { background: #ec5a5a; }
+.small {
+  width: 54px; height: 44px; border-radius: 22px; font-size: 26px; line-height: 1;
+  background: var(--panel); border: 2px solid var(--border); box-shadow: 0 3px 0 var(--border);
+}
+.small.on, .small:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--border); background: #eef4f8; }
+
+.controls { flex: 1; display: flex; gap: 12px; min-height: 0; }
+.left, .right { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
+.label { min-height: 20px; font-size: 15px; color: var(--soft); text-align: center; }
+
+/* Cruceta: un solo elemento; la dirección sale del ángulo del dedo (con diagonales). */
+.dpad {
+  --s: min(44vmin, 230px);
+  position: relative; width: var(--s); height: var(--s); touch-action: none;
+}
+.dpad::before, .dpad::after {
+  content: ""; position: absolute; background: var(--panel); border: 2px solid var(--border);
+  border-radius: 14px; box-shadow: 0 4px 0 var(--border);
+}
+.dpad::before { left: 33%; right: 33%; top: 0; bottom: 0; }
+.dpad::after { top: 33%; bottom: 33%; left: 0; right: 0; }
+.dpad .hub { position: absolute; inset: 35%; background: var(--panel); z-index: 2; border-radius: 6px; }
+.dpad .arrow { position: absolute; z-index: 3; width: 0; height: 0; border: 12px solid transparent; transition: opacity .05s; opacity: .5; }
+.dpad .arrow.up    { left: 50%; top: 9%;    transform: translateX(-50%); border-bottom: 16px solid var(--text); border-top: 0; }
+.dpad .arrow.down  { left: 50%; bottom: 9%; transform: translateX(-50%); border-top: 16px solid var(--text); border-bottom: 0; }
+.dpad .arrow.left  { top: 50%; left: 9%;    transform: translateY(-50%); border-right: 16px solid var(--text); border-left: 0; }
+.dpad .arrow.right { top: 50%; right: 9%;   transform: translateY(-50%); border-left: 16px solid var(--text); border-right: 0; }
+.dpad .arrow.on { opacity: 1; border-bottom-color: var(--accent); border-top-color: var(--accent);
+  border-left-color: var(--accent); border-right-color: var(--accent); }
+.dpad .arrow.up.on { border-left-color: transparent; border-right-color: transparent; }
+.dpad .arrow.down.on { border-left-color: transparent; border-right-color: transparent; }
+.dpad .arrow.left.on { border-top-color: transparent; border-bottom-color: transparent; }
+.dpad .arrow.right.on { border-top-color: transparent; border-bottom-color: transparent; }
+
+/* Stick: base y bolita que sigue al dedo. */
+.stick {
+  --s: min(46vmin, 240px);
+  position: relative; width: var(--s); height: var(--s); border-radius: 50%; touch-action: none;
+  background: radial-gradient(circle, #eef4f8 0 55%, var(--panel) 56%);
+  border: 2px solid var(--border); box-shadow: 0 4px 0 var(--border), inset 0 4px 14px var(--shadow);
+}
+.knob {
+  position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; border-radius: 50%;
+  transform: translate(-50%, -50%); background: var(--player);
+  box-shadow: 0 4px 0 rgba(0,0,0,.18), inset 0 -5px 0 rgba(0,0,0,.1);
+}
+
+/* Botones A/B/1/2 en rombo, como el diseño Wiimote del juego. */
+.face {
+  --s: min(48vmin, 250px);
+  position: relative; width: var(--s); height: var(--s);
+}
+.slot { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.slot-a { right: 0; top: 50%; transform: translateY(-50%); }
+.slot-b { left: 50%; top: 0; transform: translateX(-50%); }
+.slot-1 { left: 0; top: 50%; transform: translateY(-50%); }
+.slot-2 { left: 50%; bottom: 0; transform: translateX(-50%); }
+.face-btn {
+  width: calc(var(--s) * .34); height: calc(var(--s) * .34); border-radius: 50%;
+  font-size: calc(var(--s) * .13); font-weight: 900; color: #fff;
+  box-shadow: 0 5px 0 rgba(0,0,0,.2), inset 0 -5px 0 rgba(0,0,0,.08);
+}
+.face-btn.a { background: var(--a); }
+.face-btn.b { background: #ec5a5a; }
+.face-btn.n { background: #9aa6b1; }
+.face-btn.on, .face-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.2); filter: brightness(1.08); }
+/* Si solo hay A (mando contextual), A grande y en el centro. */
+.face.solo .slot-a { right: 50%; transform: translate(50%, -50%); }
+.face.solo .slot-a .face-btn { width: calc(var(--s) * .7); height: calc(var(--s) * .7); font-size: calc(var(--s) * .26); }
+
+/* Vertical: la cruceta/stick arriba y los botones abajo. */
+@media (orientation: portrait) {
+  .controls { flex-direction: column; }
+  .dpad, .stick { --s: min(62vw, 34vh, 260px); }
+  .face { --s: min(64vw, 34vh, 270px); }
+}

@@ -33,6 +33,12 @@ const LAYOUT_DSUCONTROLLER_WIIMOTE := {
 	DSUProtocol.BTN_HOME: HOME,
 }
 
+## Mando web (web/controller/): ya manda botones lógicos, así que es la identidad.
+const LAYOUT_WEB := {
+	UP: UP, DOWN: DOWN, LEFT: LEFT, RIGHT: RIGHT, A: A, B: B,
+	ONE: ONE, TWO: TWO, MINUS: MINUS, PLUS: PLUS, HOME: HOME,
+}
+
 ## Cómo sujeta el jugador el móvil. Solo importa con el diseño Wiimote de la app
 ## tumbado (cruceta a la izquierda, 1 y 2 a la derecha): ahí la cruceta gira 90° y la
 ## flecha "arriba" del móvil apunta a la izquierda del jugador. El mando propio de
