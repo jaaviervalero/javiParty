@@ -6,8 +6,6 @@ on:
   push:
     branches: [main]
     paths: ["site/**", ".github/workflows/pages.yml"]
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -28,7 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # La versión de navegador (rama web) va como zip en la última release:
-      # se despliega en /jugar/ y el mando en /jugar/m/.
+      # se despliega en /jugar/ y el mando en /jugar/m/. Tras subir una release
+      # nueva, lanza este workflow a mano (Pages solo despliega desde main).
       - name: Versión web en /jugar/
         env:
           GH_TOKEN: ${{ github.token }}
