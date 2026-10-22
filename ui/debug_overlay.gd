@@ -8,6 +8,11 @@ const REFRESH_SEC := 0.1
 var _panel: PanelContainer
 var _label: Label
 var _timer := 0.0
+## Registro de latencias (--lat en escritorio, ?lat=1 en el navegador): una línea
+## "LAT ..." por cada RTT nuevo de cada mando. Lo resume tools/latency.py.
+var _lat_log := false
+var _lat_last := {}  # mando -> último rtt_ms registrado
+var _lat_t0 := 0
 
 
 func _ready() -> void:
@@ -31,6 +36,35 @@ func _ready() -> void:
 	_label.add_color_override("font_color", Color("d8f3ff"))
 	_panel.add_child(_label)
 	visible = Settings.debug_overlay
+	_lat_log = _lat_flag()
+	_lat_t0 = OS.get_ticks_msec()
+	# --dsu=<ip>: conecta a un móvil DSU sin escanear (para medir con él).
+	for a in OS.get_cmdline_args():
+		if a.begins_with("--dsu="):
+			DSUClient.call_deferred("add_server", a.substr(6))
+
+
+func _lat_flag() -> bool:
+	if OS.has_feature("HTML5"):
+		return bool(JavaScript.eval("/[?&]lat=1/.test(location.search)", true))
+	return "--lat" in OS.get_cmdline_args()
+
+
+func _log_latency() -> void:
+	var t := OS.get_ticks_msec() - _lat_t0
+	for c in DSUClient.controllers.values():
+		_lat_line(t, "dsu", c.key, c)
+	var kind := "web-rtc" if OS.has_feature("HTML5") else "web-lan"
+	for pad in WebHub.pads.values():
+		_lat_line(t, kind, pad.uid.substr(0, 8), pad)
+
+
+func _lat_line(t: int, kind: String, id: String, c) -> void:
+	if not c.connected or c.rtt_ms < 0 or _lat_last.get(c) == c.rtt_ms:
+		return
+	_lat_last[c] = c.rtt_ms
+	print("LAT %d %s %s rtt=%.2f pps=%.1f int=%.1f jit=%.1f fps=%d" % [t, kind, id, c.rtt_ms,
+			c.pps, c.interval_ms, c.jitter_ms, Engine.get_frames_per_second()])
 
 
 func toggle() -> void:
@@ -46,6 +80,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	if _lat_log:
+		_log_latency()
 	if not visible:
 		return
 	_timer += delta
