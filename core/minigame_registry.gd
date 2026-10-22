@@ -18,6 +18,12 @@ const GAMES := [
 		"title": {"es": "Esquiva", "en": "Dodge!"}},
 	{"id": "carrera", "scene": "res://minigames/carrera/carrera.tscn",
 		"title": {"es": "Carrera de pulgares", "en": "Thumb sprint"}},
+	{"id": "memoria", "scene": "res://minigames/memoria/memoria.tscn",
+		"title": {"es": "Sigue la secuencia", "en": "Follow the sequence"}},
+	{"id": "ritmo", "scene": "res://minigames/ritmo/ritmo.tscn",
+		"title": {"es": "Al compás", "en": "On the beat"}},
+	{"id": "ovejas", "scene": "res://minigames/ovejas/ovejas.tscn",
+		"title": {"es": "Cuenta ovejas", "en": "Count the sheep"}},
 ]
 
 
