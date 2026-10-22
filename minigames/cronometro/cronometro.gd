@@ -14,6 +14,15 @@ const COL_TOP := 256.0
 const COL_BOTTOM := 682.0
 const MAX_COL_W := 340.0
 const COL_MARGIN := 10.0
+# Ambiente: taller de relojero luminoso.
+const WALL_TOP := Color("f8f2e7")
+const WALL_BOTTOM := Color("ecdcc6")
+const TABLE_WOOD := Color("d8b184")
+const TABLE_LIGHT := Color("e8cba4")
+const TABLE_DARK := Color("b98d60")
+const GEAR_SAGE := Color("cfe2da")
+const GEAR_PEACH := Color("f0dcc6")
+const GEAR_LILAC := Color("ded8ee")
 
 enum Phase { RUN, REVEAL }
 
@@ -187,8 +196,61 @@ func _game_end() -> void:
 
 # --- Dibujo ---
 
+## Escenario fijo: se pinta una vez (MinigameBase._draw_scenery).
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, WALL_TOP, WALL_BOTTOM)
+	# Mesa de madera al fondo del taller.
+	var table_y := ARENA.end.y - 46.0
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(ARENA.position.x, table_y),
+		Vector2(ARENA.end.x, table_y),
+		Vector2(ARENA.end.x, ARENA.end.y),
+		Vector2(ARENA.position.x, ARENA.end.y),
+	]), clip, TABLE_WOOD)
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(ARENA.position.x, table_y),
+		Vector2(ARENA.end.x, table_y),
+		Vector2(ARENA.end.x, table_y + 8.0),
+		Vector2(ARENA.position.x, table_y + 8.0),
+	]), clip, TABLE_LIGHT)
+	for i in 7:
+		var gx := ARENA.position.x + 70.0 + i * (ARENA.size.x - 140.0) / 6.0
+		ci.draw_line(Vector2(gx, table_y + 16.0), Vector2(gx + 30.0, ARENA.end.y - 6.0),
+				TABLE_DARK, 2.0)
+	# Columnas fijas de cada jugador.
+	var colw := _col_width()
+	var left := _col_left()
+	for i in _racers.size():
+		var rect := Rect2(left + colw * i + COL_MARGIN, COL_TOP, colw - COL_MARGIN * 2.0,
+				COL_BOTTOM - COL_TOP)
+		ci.draw_style_box(_racers[i].style, rect)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Engranajes pastel del fondo, girando muy despacio (pocos dientes).
+func _draw_gears() -> void:
+	_draw_gear(Vector2(ARENA.position.x + 118.0, ARENA.position.y + 82.0), 72.0, 10,
+			_time * 0.12, GEAR_SAGE)
+	_draw_gear(Vector2(ARENA.end.x - 132.0, ARENA.position.y + 72.0), 58.0, 9,
+			-_time * 0.09, GEAR_PEACH)
+	_draw_gear(Vector2(ARENA.end.x - 250.0, ARENA.position.y + 136.0), 38.0, 8,
+			_time * 0.15, GEAR_LILAC)
+
+
+func _draw_gear(center: Vector2, r: float, teeth: int, angle: float, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in teeth * 2:
+		var a := angle + TAU * float(i) / float(teeth * 2)
+		pts.append(center + Vector2.from_angle(a) * (r if i % 2 == 0 else r * 0.78))
+	draw_colored_polygon(pts, Color(col, 0.75))
+	draw_circle(center, r * 0.58, Color(col, 0.85))
+	draw_circle(center, r * 0.24, Color(1, 1, 1, 0.5))
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
+	_draw_gears()
 	var target := _targets[mini(_round, ROUNDS - 1)]
 	draw_text_centered(loc({"es": "Objetivo", "en": "Target"}) + "  " + ("%.2f s" % target),
 			Vector2(640, ARENA.position.y + 52), 46, WiiTheme.TEXT)
@@ -202,7 +264,6 @@ func _draw() -> void:
 		var r := _racers[i]
 		var rect := Rect2(left + colw * i + COL_MARGIN, COL_TOP,
 				colw - COL_MARGIN * 2.0, COL_BOTTOM - COL_TOP)
-		draw_style_box(r.style, rect)
 		if r.best:
 			var hl := WiiTheme.panel_style(24, Color("ffd34d"), Color(0, 0, 0, 0))
 			hl.shadow_size = 0
@@ -228,7 +289,8 @@ func _draw_racer(r: Racer, hidden: bool) -> void:
 		draw_arc(Vector2(r.cx, cy), 36.0 + (1.0 - r.flash) * 46.0, 0.0, TAU, 32,
 				Color(p.color, r.flash * 0.8), 6.0)
 
-	# Reloj
+	# Reloj de bolsillo glossy (el número va encima).
+	_draw_pocket_watch(Vector2(r.cx, COL_TOP + 190.0), col)
 	var shown := "???"
 	var tcol := WiiTheme.TEXT_SOFT
 	if r.stopped:
@@ -254,3 +316,22 @@ func _draw_racer(r: Racer, hidden: bool) -> void:
 			ecol = Color("b8891b")
 		draw_text_centered(loc({"es": "Error", "en": "Miss"}), Vector2(r.cx, COL_TOP + 312), 22, WiiTheme.TEXT_SOFT)
 		draw_text_centered("%.2f s" % r.err, Vector2(r.cx, COL_TOP + 358), 34, ecol)
+
+
+## Caja de reloj de bolsillo con tapa clara y brillo (decoración del cronómetro).
+func _draw_pocket_watch(center: Vector2, col: Color) -> void:
+	var rim := col.lerp(Color.WHITE, 0.55)
+	# Anilla y corona.
+	draw_arc(center + Vector2(0, -52.0), 7.0, 0.0, TAU, 14, Color("c9a75a"), 4.0, true)
+	draw_rect(Rect2(center + Vector2(-7, -50.0), Vector2(14, 12)), Color("d3b268"))
+	# Caja y esfera.
+	DrawKit.ellipse(self, center + Vector2(0, 4.0), Vector2(88.0, 46.0), Color(0.5, 0.42, 0.32, 0.14))
+	DrawKit.ellipse(self, center, Vector2(88.0, 46.0), rim)
+	DrawKit.ellipse(self, center + Vector2(0, -2.0), Vector2(78.0, 39.0), Color("fff8ea"))
+	DrawKit.ellipse(self, center + Vector2(-28.0, -18.0), Vector2(24.0, 10.0), Color(1, 1, 1, 0.55))
+	# Marcas de las horas.
+	for i in 12:
+		var a := TAU * float(i) / 12.0
+		draw_line(center + Vector2(cos(a) * 66.0, sin(a) * 34.0),
+				center + Vector2(cos(a) * 72.0, sin(a) * 38.0),
+				Color(0.48, 0.44, 0.38, 0.4), 2.0, true)

@@ -15,6 +15,17 @@ const SIGNAL_CENTER := Vector2(640, 330)
 const BALL_Y := 596.0
 const MAX_COL_W := 340.0
 const COL_MARGIN := 10.0
+# Ambiente: oeste amable a mediodía.
+const SKY_WARM_TOP := Color("ffe4bd")
+const SKY_WARM_BOTTOM := Color("fff6e6")
+const MESA_FAR := Color("ecc9ad")
+const MESA_NEAR := Color("e2b795")
+const DIRT := Color("eed9b4")
+const DIRT_LIGHT := Color("f5e6c9")
+const CACTUS := Color("9fd18a")
+const CACTUS_DARK := Color("7fbc72")
+const DRY_GRASS := Color("c9b483")
+const TUMBLE := Color(0.62, 0.48, 0.32, 0.5)
 
 enum Phase { PREP, SIGNAL, RESULT }
 
@@ -168,8 +179,32 @@ func _end_round() -> void:
 
 # --- Dibujo ---
 
-func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
+## Escenario fijo: se pinta una vez (MinigameBase._draw_scenery).
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, SKY_WARM_TOP, SKY_WARM_BOTTOM)
+	# Sol grande de mediodía.
+	DrawKit.sun(ci, Vector2(ARENA.end.x - 160.0, ARENA.position.y + 96.0), 52.0)
+	# Mesetas y dunas redondeadas al fondo.
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 176.0, 22.0, MESA_FAR, 0.7, 1.5, clip)
+	_draw_mesa(ci, ARENA.position.x + 250.0, ARENA.end.y - 168.0, 260.0, 96.0, MESA_NEAR, clip)
+	_draw_mesa(ci, ARENA.position.x + 985.0, ARENA.end.y - 166.0, 200.0, 76.0, MESA_FAR, clip)
+	# Suelo de tierra clara.
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 136.0, 12.0, DIRT, 0.7, 1.4, clip)
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 48.0, 7.0, DIRT_LIGHT, 2.4, 1.1, clip)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 50.0, ARENA.end.y - 34.0),
+			Vector2(ARENA.end.x - 50.0, ARENA.end.y - 34.0), 14, DRY_GRASS, 5)
+	# Piedras redondeadas.
+	var rocks := [Vector2(ARENA.position.x + 150.0, ARENA.end.y - 44.0),
+		Vector2(ARENA.position.x + 430.0, ARENA.end.y - 26.0),
+		Vector2(ARENA.end.x - 210.0, ARENA.end.y - 40.0),
+		Vector2(ARENA.end.x - 470.0, ARENA.end.y - 22.0)]
+	for i in rocks.size():
+		DrawKit.ellipse(ci, rocks[i], Vector2(20.0 - i * 2.0, 9.0 - i), Color("d8bf9c"))
+	# Cactus suaves a los lados.
+	_draw_cactus(ci, Vector2(ARENA.position.x + 130.0, ARENA.end.y - 120.0), 96.0, 1.0)
+	_draw_cactus(ci, Vector2(ARENA.end.x - 120.0, ARENA.end.y - 110.0), 78.0, 0.8)
+	# Columnas fijas de cada jugador.
 	var colw := _col_width()
 	var left := _col_left()
 	for i in _duelists.size():
@@ -177,8 +212,81 @@ func _draw() -> void:
 				colw - COL_MARGIN * 2.0, ARENA.size.y - COL_MARGIN * 2.0)
 		var st := WiiTheme.panel_style(24, Color(0, 0, 0, 0), Color(_duelists[i].player.color, 0.08))
 		st.shadow_size = 0
-		draw_style_box(st, r)
+		ci.draw_style_box(st, r)
+	DrawKit.arena_border(ci, ARENA)
 
+
+## Meseta de dibujos animados: base ancha y cima redondeada.
+func _draw_mesa(ci: CanvasItem, cx: float, base_y: float, w: float, h: float, color: Color,
+		clip: PackedVector2Array) -> void:
+	var top := base_y - h
+	var pts := PackedVector2Array()
+	pts.append(Vector2(cx - w * 0.5, base_y))
+	pts.append(Vector2(cx - w * 0.34, top + h * 0.3))
+	for i in 13:
+		var a := PI + PI * float(i) / 12.0
+		pts.append(Vector2(cx + cos(a) * w * 0.34, top + h * 0.3 + sin(a) * h * 0.3))
+	pts.append(Vector2(cx + w * 0.5, base_y))
+	DrawKit.clipped_polygon(ci, pts, clip, color)
+	# Cima más clara donde da el sol.
+	var lit := PackedVector2Array()
+	for i in 13:
+		var a := PI + PI * float(i) / 12.0
+		lit.append(Vector2(cx + cos(a) * w * 0.3, top + h * 0.24 + sin(a) * h * 0.22))
+	DrawKit.clipped_polygon(ci, lit, clip, Color(color.lightened(0.12), 0.45))
+
+
+## Cactus redondeado, sin pinchos agresivos.
+func _draw_cactus(ci: CanvasItem, base: Vector2, h: float, s: float) -> void:
+	var w := 22.0 * s
+	ci.draw_rect(Rect2(base.x - w * 0.5, base.y - h, w, h), CACTUS)
+	ci.draw_circle(Vector2(base.x, base.y - h), w * 0.5, CACTUS)
+	ci.draw_circle(Vector2(base.x, base.y), w * 0.5, CACTUS)
+	_draw_cactus_arm(ci, Vector2(base.x, base.y - h * 0.58), -1.0, 26.0 * s, 18.0 * s)
+	_draw_cactus_arm(ci, Vector2(base.x, base.y - h * 0.4), 1.0, 20.0 * s, 14.0 * s)
+	ci.draw_line(Vector2(base.x - w * 0.22, base.y - h + 10.0 * s),
+			Vector2(base.x - w * 0.22, base.y - 8.0), Color(1, 1, 1, 0.22), 3.0, true)
+
+
+func _draw_cactus_arm(ci: CanvasItem, from: Vector2, dir: float, len_x: float, up: float) -> void:
+	var elbow := from + Vector2(dir * len_x, 0)
+	var tip := elbow + Vector2(0, -up)
+	ci.draw_line(from, elbow, CACTUS_DARK, 10.0, true)
+	ci.draw_line(elbow, tip, CACTUS_DARK, 10.0, true)
+	ci.draw_circle(from, 5.0, CACTUS_DARK)
+	ci.draw_circle(elbow, 5.0, CACTUS_DARK)
+	ci.draw_circle(tip, 5.0, CACTUS_DARK)
+
+
+## Dos matojos rodando despacio (ambiente barato).
+func _draw_tumbleweeds() -> void:
+	_draw_tumbleweed(_tumble_pos(0.0, 44.0), 15.0)
+	_draw_tumbleweed(_tumble_pos(2.7, 32.0), 11.0)
+
+
+func _tumble_pos(phase: float, speed: float) -> Vector2:
+	# Recorren la arena de lado a lado, sin salirse del marco.
+	var lo := ARENA.position.x + 26.0
+	var hi := ARENA.end.x - 26.0
+	var t := fmod(_time * speed / (hi - lo) + phase * 0.11, 1.0)
+	var x := lerpf(lo, hi, t)
+	var y := ARENA.end.y - 74.0 - absf(sin(_time * 2.4 + phase)) * 14.0
+	return Vector2(x, y)
+
+
+func _draw_tumbleweed(p: Vector2, r: float) -> void:
+	var spin := _time * 2.2
+	draw_arc(p, r, 0.0, TAU, 16, TUMBLE, 2.0, true)
+	draw_arc(p, r * 0.62, spin, spin + TAU * 0.8, 12, TUMBLE, 1.8, true)
+	for i in 5:
+		var a := spin + TAU * float(i) / 5.0
+		draw_line(p + Vector2.from_angle(a) * r * 0.3, p + Vector2.from_angle(a) * r * 0.92,
+				TUMBLE, 1.8, true)
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
+func _draw() -> void:
+	_draw_tumbleweeds()
 	draw_text_centered(loc({"es": "Ronda %d de %d", "en": "Round %d of %d"}) % [_round, ROUNDS],
 			Vector2(640, ARENA.position.y + 46), 26, WiiTheme.TEXT_SOFT)
 
