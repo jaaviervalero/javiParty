@@ -208,6 +208,38 @@ function stop() {
   state = "off";
 }
 
+// Sale de la sala y entra otra vez con el mismo código. Los móviles la ven
+// caer, se reenganchan solos y conservan su jugador (los reconoce su id).
+function rejoin() {
+  if (!currentRoom || state === "off") return;
+  for (const peer of peerIds.keys()) events.push({ e: "disconnect", peer: peer });
+  for (const entry of rooms) {
+    try {
+      const p = entry.room.leave();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  }
+  rooms = [];
+  peerIds = new Map();
+  peers = new Map();
+  sources = new Map();
+  state = "connecting";
+  const gen = ++startGen;
+  loadTrystero().then((mod) => {
+    if (gen !== startGen || state === "off") return;
+    initRooms(mod);
+  }).catch((e) => { if (gen === startGen) state = "error:" + ((e && e.message) || e); });
+}
+
+// Con la pestaña oculta un rato, el navegador puede haber cerrado las
+// conexiones del apretón de manos: al volver, se entra de nuevo en la sala.
+let hiddenSince = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") { hiddenSince = Date.now(); return; }
+  if (hiddenSince && Date.now() - hiddenSince > 5000) rejoin();
+  hiddenSince = 0;
+});
+
 window.jpNet = {
   start: start,
   poll: poll,
@@ -216,4 +248,5 @@ window.jpNet = {
   stop: stop,
   status: () => state,
   room: () => currentRoom,
+  rejoin: rejoin,
 };

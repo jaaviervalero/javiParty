@@ -93,6 +93,10 @@ const RTC_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const RTC_HOST_WAIT_MS = 15000;
 const RTC_HOST_GONE_MS = 4000;   // el host manda ping cada segundo
 const RTC_HELLO_MS = 2000;
+// Tras perder el host, si en este tiempo no vuelve, se sale de la sala y se
+// entra de nuevo: Safari cierra en segundo plano las conexiones del apretón de
+// manos y sin ellas no se puede volver a encontrar al host.
+const RTC_REJOIN_MS = 3000;
 
 function normalizeRoom(v) {
   const s = String(v || "").trim().toUpperCase();
@@ -260,6 +264,11 @@ function armHostWait(st) {
   clearTimeout(st.waitTimer);
   st.waitTimer = setTimeout(() => {
     if (rtc !== st || st.hostId || !wantConnection) return;
+    if (connectedOnce) {
+      // Ya jugábamos en esta sala: la partida existe, no hay que rendirse.
+      connectRtc();
+      return;
+    }
     wantConnection = false;
     stopHeartbeat();
     stopRtc();
@@ -312,6 +321,10 @@ function hostLost(st) {
   if (!st.helloTimer) st.helloTimer = setInterval(() => rtcHelloAll(st), RTC_HELLO_MS);
   rtcHelloAll(st);
   armHostWait(st);
+  clearTimeout(st.rejoinTimer);
+  st.rejoinTimer = setTimeout(() => {
+    if (rtc === st && !st.hostId && wantConnection) connectRtc();
+  }, RTC_REJOIN_MS);
 }
 
 function rtcPeerLeave(st, id) {
@@ -331,6 +344,7 @@ function stopRtc() {
   clearInterval(st.helloTimer);
   clearInterval(st.watchTimer);
   clearTimeout(st.waitTimer);
+  clearTimeout(st.rejoinTimer);
   for (const entry of st.entries) {
     try {
       const p = entry.room.leave();
@@ -549,8 +563,10 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     keepAwake();
     if (mode === "rtc") {
-      if (wantConnection && (!rtc || rtc.entries.length === 0)) connect();
-      else if (rtc && !rtc.hostId) rtcHelloAll(rtc);
+      // Al volver del segundo plano las conexiones pueden estar muertas aunque
+      // no lo parezca: sin noticias recientes del host, se entra de nuevo.
+      const stale = !rtc || !rtc.hostId || Date.now() - rtc.lastHost > 2000;
+      if ((wantConnection || connectedOnce) && stale) { wantConnection = true; connect(); }
     } else if (connectedOnce && (!ws || ws.readyState > 1)) {
       attempts = 0; wantConnection = true; connect();
     }
