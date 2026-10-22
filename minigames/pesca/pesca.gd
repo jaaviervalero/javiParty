@@ -24,6 +24,15 @@ const SPEEDS := [115.0, 78.0, 48.0, 62.0]
 const ZONE_W := [0.34, 0.25, 0.14, 0.30]
 const KIND_COLORS := [Color("8ed4e8"), Color("f7c58e"), Color("b6a4e8"), Color("a08262")]
 const FISH_COUNTS := [5, 3, 2, 2]
+# Ambiente: estanque luminoso de mañana.
+const WATER_LIGHT := Color("d9f0f8")
+const WATER_DEEP := Color("b6dfec")
+const BANK_SAND := Color("f0e0b8")
+const REED := Color("7fae6a")
+const REED_DARK := Color("5f9450")
+const CATKIN := Color("9a6b4a")
+const LILY := Color("8fce7e")
+const LILY_DARK := Color("6fb862")
 
 
 class Fisher:
@@ -277,9 +286,74 @@ func _update_effects(delta: float) -> void:
 
 # --- Dibujo ---
 
+## Escenario fijo: se pinta una vez (MinigameBase._draw_scenery).
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	var inner := ARENA.grow(-10.0)
+	DrawKit.arena_frame(ci, ARENA, Color("f2fbff"), Color("bfe4f0"))
+	# Cielo claro sobre el muelle.
+	ci.draw_rect(Rect2(inner.position, Vector2(inner.size.x, WATER_TOP - inner.position.y)),
+			Color("eef7fb"))
+	# Agua del estanque, más profunda al fondo.
+	var water := Rect2(inner.position.x, WATER_TOP, inner.size.x, inner.end.y - WATER_TOP)
+	DrawKit.vgradient(ci, water, WATER_LIGHT, WATER_DEEP)
+	# Reflejos suaves bajo los postes y brillo del cielo.
+	for i in 7:
+		var rx := inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
+		DrawKit.ellipse(ci, Vector2(rx, WATER_TOP + 34.0), Vector2(17.0, 4.0), Color(1, 1, 1, 0.32))
+	DrawKit.ellipse(ci, Vector2(inner.position.x + 300.0, WATER_TOP + 12.0), Vector2(190.0, 9.0),
+			Color(1, 1, 1, 0.18))
+	# Muelle de madera.
+	ci.draw_rect(Rect2(inner.position.x, inner.position.y, inner.size.x,
+			WATER_TOP - inner.position.y), Color("e6d3b3"))
+	for i in 6:
+		var ly := inner.position.y + 10.0 + i * 18.0
+		ci.draw_line(Vector2(inner.position.x, ly), Vector2(inner.end.x, ly), Color("cdb894"), 3.0)
+	# Postes del muelle sobre el agua.
+	for i in 7:
+		var px := inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
+		ci.draw_line(Vector2(px, WATER_TOP - 14.0), Vector2(px, WATER_TOP + 16.0),
+				Color("a8885f"), 8.0)
+	# Orilla de arena a la izquierda.
+	var bank := PackedVector2Array([
+		Vector2(inner.position.x, WATER_TOP - 4.0),
+		Vector2(inner.position.x + 168.0, WATER_TOP + 8.0),
+		Vector2(inner.position.x + 118.0, WATER_TOP + 74.0),
+		Vector2(inner.position.x + 40.0, WATER_TOP + 150.0),
+		Vector2(inner.position.x, WATER_TOP + 190.0),
+	])
+	DrawKit.clipped_polygon(ci, bank, clip, BANK_SAND)
+	# Juncos y cañas en la orilla.
+	_draw_reeds(ci, Vector2(inner.position.x + 54.0, WATER_TOP + 34.0), 5, 11)
+	_draw_reeds(ci, Vector2(inner.position.x + 132.0, WATER_TOP + 46.0), 3, 23)
+	# Nenúfares.
+	for i in 3:
+		var p := Vector2(inner.position.x + 250.0 + i * 66.0, WATER_TOP + 136.0 + (i % 2) * 72.0)
+		DrawKit.ellipse(ci, p, Vector2(25.0, 10.0), LILY_DARK)
+		DrawKit.ellipse(ci, p + Vector2(0, -2.0), Vector2(22.0, 8.0), LILY)
+	DrawKit.flower(ci, Vector2(inner.position.x + 382.0, WATER_TOP + 133.0), 6.0,
+			Color("ffd1e3"), Color("fff3c4"))
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Juncos: tallos verdes con espiga en la punta.
+func _draw_reeds(ci: CanvasItem, base: Vector2, count: int, seed: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	for i in count:
+		var bx := base.x + rng.randf_range(-26.0, 26.0)
+		var h := rng.randf_range(54.0, 92.0)
+		var lean := rng.randf_range(-12.0, 12.0)
+		var tip := Vector2(bx + lean, base.y - h)
+		ci.draw_line(Vector2(bx, base.y), tip, REED, 3.0, true)
+		ci.draw_line(Vector2(bx, base.y - h * 0.42),
+				Vector2(bx + lean * 0.5 + 11.0, base.y - h * 0.66), REED_DARK, 2.0, true)
+		DrawKit.ellipse(ci, tip + Vector2(lean * 0.08, 6.0), Vector2(4.0, 12.0), CATKIN)
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
-	_draw_pond()
+	_draw_water_bands()
 	for fi in _fish:
 		_draw_fish(fi)
 	for f in _fishers:
@@ -288,30 +362,13 @@ func _draw() -> void:
 		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
 
 
-func _draw_pond() -> void:
+## Dos bandas de olas animadas (baratas: solo la franja alta del agua).
+func _draw_water_bands() -> void:
 	var inner := ARENA.grow(-10.0)
-	# Cielo y agua.
-	draw_rect(Rect2(inner.position, Vector2(inner.size.x, WATER_TOP - inner.position.y)), Color("eef7fb"))
-	var water := Rect2(inner.position.x, WATER_TOP, inner.size.x, inner.end.y - WATER_TOP)
-	draw_rect(water, Color("cfeaf3"))
-	# Ondas suaves.
-	for i in 3:
-		var y := WATER_TOP + 26.0 + i * 118.0
-		var pts := PackedVector2Array()
-		for k in 17:
-			var x := inner.position.x + inner.size.x * float(k) / 16.0
-			pts.append(Vector2(x, y + sin(_time * 1.4 + k * 0.7 + i) * 4.0))
-		draw_polyline(pts, Color(1, 1, 1, 0.35), 3.0, true)
-	# Muelle de madera.
-	draw_rect(Rect2(inner.position.x, inner.position.y, inner.size.x, WATER_TOP - inner.position.y),
-			Color("e6d3b3"))
-	for i in 6:
-		var y := inner.position.y + 10.0 + i * 18.0
-		draw_line(Vector2(inner.position.x, y), Vector2(inner.end.x, y), Color("cdb894"), 3.0)
-	# Postes del muelle sobre el agua.
-	for i in 7:
-		var x := inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
-		draw_line(Vector2(x, WATER_TOP - 14.0), Vector2(x, WATER_TOP + 16.0), Color("a8885f"), 8.0)
+	DrawKit.waves(self, Rect2(inner.position.x, WATER_TOP, inner.size.x, 92.0),
+			WATER_TOP + 28.0, 5.0, Color(1, 1, 1, 0.16), _time * 0.9, 140.0)
+	DrawKit.waves(self, Rect2(inner.position.x, WATER_TOP + 62.0, inner.size.x, 104.0),
+			WATER_TOP + 98.0, 4.0, Color(0.72, 0.9, 0.96, 0.18), _time * 0.6 + 2.0, 180.0)
 
 
 func _draw_fisher(f: Fisher) -> void:
