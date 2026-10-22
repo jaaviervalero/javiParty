@@ -83,6 +83,7 @@ func apply_input(msg: Dictionary, now_msec: int) -> void:
 func mark_disconnected() -> void:
 	connected = false
 	peer = 0
+	packet_number = -1  # la página recargada vuelve a contar desde 1
 	pps = 0.0
 	buttons = 0
 	left_stick = Vector2.ZERO

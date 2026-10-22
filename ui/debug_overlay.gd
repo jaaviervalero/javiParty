@@ -83,6 +83,26 @@ func _build_text() -> String:
 			c.gyro.x, c.gyro.y, c.gyro.z, c.motion_timestamp])
 		if c.touch1.get("active", false) or c.touch2.get("active", false):
 			lines.append("  toque1 %s  toque2 %s" % [_touch(c.touch1), _touch(c.touch2)])
+
+	# --- Mandos web (WebHub) ---
+	lines.append("")
+	var w: Dictionary = WebHub.stats
+	var url: String = WebHub.controller_url()
+	lines.append("web %s · mando %s · rx %d · JSON malo %d · hello malo %d · lleno %d" % [
+		"EN MARCHA" if WebHub.is_running() else "PARADO", url if url != "" else "-",
+		w.rx, w.bad_json, w.bad_hello, w.full])
+	if WebHub.pads.empty():
+		lines.append("(sin mandos web)")
+	for pad in WebHub.pads.values():
+		lines.append("")
+		lines.append("%s web %s  %s  %s" % [
+			_player_tag(pad), pad.uid.substr(0, 8), pad.ip if pad.ip != "" else "sin IP",
+			"CONECTADO" if pad.connected else "DESCONECTADO"])
+		# Los botones de WebPad ya son lógicos de Pad: no hay diseño que traducir.
+		lines.append("  botones web [%s]  L(%+.2f,%+.2f)  pkt#%d  %.1f pps  RTT %s  viejos %d" % [
+			Pad.to_string_names(pad.buttons), pad.left_stick.x, pad.left_stick.y,
+			pad.packet_number, pad.pps, "%.1f ms" % pad.rtt_ms if pad.rtt_ms >= 0 else "?",
+			pad.dropped_old])
 	return "\n".join(lines)
 
 

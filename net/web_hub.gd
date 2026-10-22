@@ -157,6 +157,7 @@ func _on_hello(peer: int, msg: Dictionary) -> void:
 	var uid := str(msg.get("id", ""))
 	if not _valid_uid(uid):
 		stats.bad_hello += 1
+		_peer_ip.erase(peer)
 		_transport.close(peer)
 		return
 	var pad = pads.get(uid)
