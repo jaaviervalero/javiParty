@@ -9,3 +9,5 @@ export_presets.cfg.bak
 __pycache__/
 *.pyc
 tools/probe_motion.json
+.claude/
+.claude/

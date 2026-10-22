@@ -1,6 +1,8 @@
 extends Node
 ## Test automático de un minijuego con 4 bots que pulsan al azar:
-##   tools/smoke.sh <id>        (o: godot --headless --path . tests/minigame_smoke.tscn -- <id>)
+##   tools/smoke.sh <id>        (o: godot --headless --path . tests/minigame_smoke.tscn -- <id> [n])
+## Con ventana y un tercer argumento, guarda una captura a mitad de partida:
+##   godot --path . tests/minigame_smoke.tscn -- <id> <n> <captura.png>
 ## Recorre intro, cuenta atrás, partida y resultados a velocidad x4 y comprueba que
 ## termina con una clasificación válida. Los errores de script los detecta smoke.sh.
 
@@ -9,6 +11,7 @@ const TIMEOUT_MSEC := 90000
 
 var _game: MinigameBase
 var _start := 0
+var _shot_path := ""
 
 
 func _ready() -> void:
@@ -23,6 +26,8 @@ func _ready() -> void:
 		return
 	MinigameBase.headless_test = true
 	var n := 4 if args.size() < 2 else int(args[1])
+	if args.size() > 2:
+		_shot_path = args[2]
 	for i in n:
 		var p := Player.new(i, PlayerManager.COLORS[i], "Bot %d" % (i + 1))
 		p.bot = true
@@ -48,6 +53,12 @@ func _process(_delta: float) -> void:
 	if Time.get_ticks_msec() - _start > TIMEOUT_MSEC:
 		_fail("no terminó en %d s reales (¿falta límite de tiempo o finish()?)" % (TIMEOUT_MSEC / 1000))
 		return
+	if _shot_path != "" and _game.state == MinigameBase.State.PLAYING and _game.elapsed > _game.duration * 0.4:
+		var path := _shot_path
+		_shot_path = ""
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(path)
+		print("SMOKE: captura en ", path)
 	# Bots: machacan botones y mueven el stick al azar.
 	for p in PlayerManager.active_players():
 		var b := 0
