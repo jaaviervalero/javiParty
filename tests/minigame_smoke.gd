@@ -53,7 +53,7 @@ func _process(_delta: float) -> void:
 	if Time.get_ticks_msec() - _start > TIMEOUT_MSEC:
 		_fail("no terminó en %d s reales (¿falta límite de tiempo o finish()?)" % (TIMEOUT_MSEC / 1000))
 		return
-	if _shot_path != "" and _game.state == MinigameBase.State.PLAYING and _game.elapsed > _game.duration * 0.4:
+	if _shot_path != "" and _game.state == MinigameBase.State.PLAYING and _game.elapsed > minf(_game.duration * 0.4, 4.0):
 		var path := _shot_path
 		_shot_path = ""
 		await RenderingServer.frame_post_draw

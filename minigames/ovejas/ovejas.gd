@@ -91,6 +91,11 @@ var _closest: Array[int] = []
 var _confirm_t: Array[float] = []
 
 var _time := 0.0
+# Rebaño en una capa recortada al prado: así entran y salen poco a poco por los
+# lados en vez de aparecer de golpe. _cv/_cv_origin: dónde dibujan ovejas y lobos.
+var _herd: Control
+var _cv: CanvasItem = self
+var _cv_origin := Vector2.ZERO
 var _tufts: Array[Vector2] = []
 var _flowers: Array = []  # [[Vector2, índice de color]]
 
@@ -108,6 +113,14 @@ func _configure() -> void:
 
 
 func _setup() -> void:
+	var clip_rect := ARENA.grow(-SCENERY_INSET)
+	_herd = Control.new()
+	_herd.position = clip_rect.position
+	_herd.size = clip_rect.size
+	_herd.clip_contents = true
+	_herd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_herd.draw.connect(_draw_herd)
+	add_child(_herd)
 	# Matitas y flores del prado, fijas durante toda la partida.
 	var inner := ARENA.grow(-SCENERY_INSET)
 	for i in 26:
@@ -190,6 +203,7 @@ func _build_round() -> void:
 
 func _game_process(delta: float) -> void:
 	_time += delta
+	_herd.queue_redraw()
 	match _phase:
 		Phase.COUNT:
 			_tick_count(delta)
@@ -332,15 +346,21 @@ func _draw_sky() -> void:
 		var base: Vector2 = c[0]
 		var x := inner.position.x - 160.0 + fposmod(base.x + _time * float(c[2]), span)
 		var y := inner.position.y + base.y + sin(_time * 0.6 + base.x * 0.01) * 4.0
-		_draw_cloud(Vector2(x, y), float(c[1]))
+		# Se desvanecen al llegar a los bordes para no salirse del marco.
+		var half := 55.0 * float(c[1])
+		var edge := minf(x - half - inner.position.x, inner.end.x - half - x)
+		var alpha := clampf(edge / 80.0, 0.0, 1.0)
+		if alpha > 0.0:
+			_draw_cloud(Vector2(x, y), float(c[1]), alpha)
 
 
-func _draw_cloud(c: Vector2, s: float) -> void:
-	draw_circle(c + Vector2(0, 2) * s, 25.0 * s, CLOUD_COLOR)
-	draw_circle(c + Vector2(-30, 8) * s, 19.0 * s, CLOUD_COLOR)
-	draw_circle(c + Vector2(30, 7) * s, 21.0 * s, CLOUD_COLOR)
-	draw_circle(c + Vector2(-11, 14) * s, 16.0 * s, CLOUD_COLOR)
-	draw_circle(c + Vector2(16, 14) * s, 15.0 * s, CLOUD_COLOR)
+func _draw_cloud(c: Vector2, s: float, alpha := 1.0) -> void:
+	var col := Color(CLOUD_COLOR, CLOUD_COLOR.a * alpha)
+	draw_circle(c + Vector2(0, 2) * s, 25.0 * s, col)
+	draw_circle(c + Vector2(-30, 8) * s, 19.0 * s, col)
+	draw_circle(c + Vector2(30, 7) * s, 21.0 * s, col)
+	draw_circle(c + Vector2(-11, 14) * s, 16.0 * s, col)
+	draw_circle(c + Vector2(16, 14) * s, 15.0 * s, col)
 
 
 func _draw_hills() -> void:
@@ -387,26 +407,31 @@ func _draw_meadow_details() -> void:
 # =====================================================================
 
 func _draw_count() -> void:
-	var inner := ARENA.grow(-SCENERY_INSET)
+	_draw_fence()
+	_draw_count_header()
+
+
+## Ovejas y lobos, dibujados en la capa recortada (encima de la valla).
+func _draw_herd() -> void:
+	if _phase != Phase.COUNT:
+		return
 	var top := ARENA.position.y + 330.0
 	var bottom := ARENA.end.y - 76.0
 	var list: Array = []
 	for e in _critters:
-		var age := _phase_t - e.spawn_t
-		if age <= 0.0:
-			continue
-		# Sin recorte real: no dibujamos a quien asomaría fuera del panel.
-		var margin := 66.0 * e.size
-		if e.x < inner.position.x + margin or e.x > inner.end.x - margin:
+		if _phase_t - e.spawn_t <= 0.0:
 			continue
 		var y := clampf(e.y + sin((_time + e.wobble) * 3.0) * 5.0 * e.size,
 				top - 20.0, bottom + 20.0)
 		list.append([y, e])
 	list.sort_custom(func(a, b): return a[0] < b[0])
-	_draw_fence()
+	_cv = _herd
+	_cv_origin = _herd.position
+	_herd.draw_set_transform(-_cv_origin)
 	for item in list:
 		_draw_critter(item[1], item[0])
-	_draw_count_header()
+	_cv = self
+	_cv_origin = Vector2.ZERO
 
 
 func _draw_count_header() -> void:
@@ -630,9 +655,9 @@ func _panel(rect: Rect2, radius: int, border: Color, bg: Color, border_w: int) -
 
 
 func _ellipse(center: Vector2, radii: Vector2, color: Color) -> void:
-	draw_set_transform(center, 0.0, radii)
-	draw_circle(Vector2.ZERO, 1.0, color)
-	draw_set_transform(Vector2.ZERO)
+	_cv.draw_set_transform(center - _cv_origin, 0.0, radii)
+	_cv.draw_circle(Vector2.ZERO, 1.0, color)
+	_cv.draw_set_transform(-_cv_origin)
 
 
 # =====================================================================
@@ -646,31 +671,31 @@ func _draw_sheep(base: Vector2, s: float, dir: int, hop: float, gait: float) -> 
 	_ellipse(Vector2(base.x, base.y + 30.0 * s), Vector2(28.0 * s * sh, 9.0 * s * sh), WiiTheme.SHADOW)
 	# Patas con marcha alterna.
 	var sw := sin(gait) * 4.5 * s
-	draw_line(Vector2(body.x - 12.0 * s + sw, body.y + 8.0 * s),
+	_cv.draw_line(Vector2(body.x - 12.0 * s + sw, body.y + 8.0 * s),
 			Vector2(body.x - 12.0 * s + sw * 1.4, body.y + 29.0 * s), SHEEP_DARK, 5.0 * s)
-	draw_line(Vector2(body.x + 11.0 * s - sw, body.y + 8.0 * s),
+	_cv.draw_line(Vector2(body.x + 11.0 * s - sw, body.y + 8.0 * s),
 			Vector2(body.x + 11.0 * s - sw * 1.4, body.y + 29.0 * s), SHEEP_DARK, 5.0 * s)
-	draw_line(Vector2(body.x - 1.0 * s - sw * 0.7, body.y + 9.0 * s),
+	_cv.draw_line(Vector2(body.x - 1.0 * s - sw * 0.7, body.y + 9.0 * s),
 			Vector2(body.x - 1.0 * s - sw, body.y + 28.0 * s), SHEEP_DARK.darkened(0.12), 4.0 * s)
-	draw_line(Vector2(body.x + 18.0 * s + sw * 0.7, body.y + 9.0 * s),
+	_cv.draw_line(Vector2(body.x + 18.0 * s + sw * 0.7, body.y + 9.0 * s),
 			Vector2(body.x + 18.0 * s + sw, body.y + 28.0 * s), SHEEP_DARK.darkened(0.12), 4.0 * s)
 	# Lana: base con sombra y varios copos blancos.
 	_ellipse(body + Vector2(0, 4) * s, Vector2(24.0 * s, 17.0 * s), WOOL_SHADE)
 	for o: Vector2 in [Vector2(-17, 1), Vector2(-6, -10), Vector2(8, -11),
 			Vector2(19, -1), Vector2(8, 9), Vector2(-8, 9)]:
-		draw_circle(body + o * s, 12.5 * s, WOOL)
-	draw_circle(body + Vector2(-9, -13) * s, 6.0 * s, Color(1, 1, 1, 0.9))
+		_cv.draw_circle(body + o * s, 12.5 * s, WOOL)
+	_cv.draw_circle(body + Vector2(-9, -13) * s, 6.0 * s, Color(1, 1, 1, 0.9))
 	# Cabeza.
 	var head := body + Vector2(dir * 25.0, 1.0) * s
 	_ellipse(head + Vector2(-dir * 4.0, -8.0) * s, Vector2(7.0, 4.5) * s, SHEEP_HEAD.darkened(0.08))
-	draw_circle(head, 12.0 * s, SHEEP_HEAD)
-	draw_circle(head + Vector2(-dir * 1.0, -10.0) * s, 7.0 * s, WOOL)
+	_cv.draw_circle(head, 12.0 * s, SHEEP_HEAD)
+	_cv.draw_circle(head + Vector2(-dir * 1.0, -10.0) * s, 7.0 * s, WOOL)
 	_ellipse(head + Vector2(dir * 7.0, 3.0) * s, Vector2(7.0, 5.0) * s, SHEEP_MUZZLE)
 	var eye := head + Vector2(dir * 3.0, -3.0) * s
-	draw_circle(eye, 3.6 * s, Color.WHITE)
-	draw_circle(eye + Vector2(dir * 1.1, 0.2) * s, 1.9 * s, EYE_DARK)
-	draw_circle(eye + Vector2(0, -0.9) * s, 0.7 * s, Color(1, 1, 1, 0.9))
-	draw_circle(head + Vector2(dir * 11.0, 1.5) * s, 1.6 * s, Color("48545e"))
+	_cv.draw_circle(eye, 3.6 * s, Color.WHITE)
+	_cv.draw_circle(eye + Vector2(dir * 1.1, 0.2) * s, 1.9 * s, EYE_DARK)
+	_cv.draw_circle(eye + Vector2(0, -0.9) * s, 0.7 * s, Color(1, 1, 1, 0.9))
+	_cv.draw_circle(head + Vector2(dir * 11.0, 1.5) * s, 1.6 * s, Color("48545e"))
 
 
 func _draw_wolf(base: Vector2, s: float, dir: int, hop: float, gait: float) -> void:
@@ -682,41 +707,41 @@ func _draw_wolf(base: Vector2, s: float, dir: int, hop: float, gait: float) -> v
 	for off: float in [-16.0, -5.0, 9.0, 20.0]:
 		var x := body.x + off * s
 		var swing := sw if off < 0.0 else -sw
-		draw_line(Vector2(x, body.y + 10.0 * s), Vector2(x + swing, body.y + 30.0 * s),
+		_cv.draw_line(Vector2(x, body.y + 10.0 * s), Vector2(x + swing, body.y + 30.0 * s),
 				WOLF_DARK, 6.0 * s)
 	# Cola poblada hacia atrás.
 	var tail_a := body + Vector2(-dir * 16.0, -2.0) * s
 	var tail_b := body + Vector2(-dir * 40.0, -20.0) * s
-	draw_line(tail_a, tail_b, WOLF_DARK, 9.0 * s)
-	draw_circle(tail_b, 7.0 * s, WOLF_LIGHT)
+	_cv.draw_line(tail_a, tail_b, WOLF_DARK, 9.0 * s)
+	_cv.draw_circle(tail_b, 7.0 * s, WOLF_LIGHT)
 	# Cuerpo y pecho claro.
 	_ellipse(body + Vector2(0, 1.0) * s, Vector2(27.0 * s, 17.0 * s), WOLF_BODY)
 	_ellipse(body + Vector2(dir * 10.0, 6.0) * s, Vector2(14.0 * s, 11.0 * s), WOLF_LIGHT)
 	# Cabeza.
 	var head := body + Vector2(dir * 27.0, -13.0) * s
 	_ellipse(head + Vector2(dir * 8.0, 1.0) * s, Vector2(15.0, 9.0) * s, WOLF_BODY)
-	draw_circle(head, 12.5 * s, WOLF_BODY)
+	_cv.draw_circle(head, 12.5 * s, WOLF_BODY)
 	# Orejas puntiagudas.
-	draw_colored_polygon(PackedVector2Array([
+	_cv.draw_colored_polygon(PackedVector2Array([
 		head + Vector2(-8, -8) * s, head + Vector2(-13, -26) * s, head + Vector2(0, -12) * s]),
 		WOLF_DARK)
-	draw_colored_polygon(PackedVector2Array([
+	_cv.draw_colored_polygon(PackedVector2Array([
 		head + Vector2(4, -10) * s, head + Vector2(6, -28) * s, head + Vector2(14, -7) * s]),
 		WOLF_DARK)
-	draw_colored_polygon(PackedVector2Array([
+	_cv.draw_colored_polygon(PackedVector2Array([
 		head + Vector2(-6, -11) * s, head + Vector2(-10, -22) * s, head + Vector2(-2, -13) * s]),
 		WOLF_EAR)
-	draw_colored_polygon(PackedVector2Array([
+	_cv.draw_colored_polygon(PackedVector2Array([
 		head + Vector2(6, -12) * s, head + Vector2(7, -24) * s, head + Vector2(11, -9) * s]),
 		WOLF_EAR)
 	# Hocico y nariz.
 	_ellipse(head + Vector2(dir * 12.0, 2.0) * s, Vector2(9.0, 6.0) * s, WOLF_LIGHT)
-	draw_circle(head + Vector2(dir * 19.0, 1.0) * s, 2.6 * s, EYE_DARK)
+	_cv.draw_circle(head + Vector2(dir * 19.0, 1.0) * s, 2.6 * s, EYE_DARK)
 	# Ojos grandes y amables.
 	var eye := head + Vector2(dir * 4.0, -4.0) * s
-	draw_circle(eye, 4.0 * s, Color.WHITE)
-	draw_circle(eye + Vector2(dir * 1.2, 0.2) * s, 2.1 * s, EYE_DARK)
-	draw_circle(eye + Vector2(-0.4, -1.2) * s, 0.8 * s, Color(1, 1, 1, 0.95))
+	_cv.draw_circle(eye, 4.0 * s, Color.WHITE)
+	_cv.draw_circle(eye + Vector2(dir * 1.2, 0.2) * s, 2.1 * s, EYE_DARK)
+	_cv.draw_circle(eye + Vector2(-0.4, -1.2) * s, 0.8 * s, Color(1, 1, 1, 0.95))
 	# Sonrisa.
-	draw_line(head + Vector2(dir * 12.0, 7.0) * s, head + Vector2(dir * 16.0, 6.0) * s,
+	_cv.draw_line(head + Vector2(dir * 12.0, 7.0) * s, head + Vector2(dir * 16.0, 6.0) * s,
 			WOLF_DARK, 1.8 * s)

@@ -4,8 +4,8 @@ extends RefCounted
 static func draw(ci: CanvasItem, r: Rect2) -> void:
 	DrawKit.vgradient(ci, r, Color("b9e59b"), Color("8ed16f"))
 	# Manchas de césped.
-	DrawKit.ellipse(ci, r.position + r.size * Vector2(0.24, 0.3), Vector2(62.0, 24.0), Color("7cc45e", 0.3))
-	DrawKit.ellipse(ci, r.position + r.size * Vector2(0.8, 0.7), Vector2(70.0, 26.0), Color("c6ea9f", 0.35))
+	DrawKit.ellipse(ci, r.position + r.size * Vector2(0.26, 0.3), Vector2(56.0, 24.0), Color("7cc45e", 0.3))
+	DrawKit.ellipse(ci, r.position + r.size * Vector2(0.7, 0.7), Vector2(62.0, 26.0), Color("c6ea9f", 0.35))
 	# Camino de tierra.
 	var path_y := r.position.y + r.size.y * 0.78
 	ci.draw_colored_polygon(PackedVector2Array([

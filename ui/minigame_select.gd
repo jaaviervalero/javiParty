@@ -56,7 +56,7 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 16)
+		margin.add_theme_constant_override("margin_" + side, 24)
 	scroll.add_child(margin)
 	var grid := GridContainer.new()
 	grid.columns = COLUMNS

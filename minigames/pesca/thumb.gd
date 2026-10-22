@@ -8,8 +8,13 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	DrawKit.vgradient(ci, Rect2(r.position.x, water_y, r.size.x, r.end.y - water_y),
 			Color("d9f0f8"), Color("b6dfec"))
 	# Orilla de arena con juncos.
-	DrawKit.ellipse(ci, Vector2(r.position.x + 6.0, r.end.y - 22.0), Vector2(52.0, 36.0),
-			Color("f0e0b8"))
+	# Recortada a la miniatura: la elipse sobresale por la izquierda.
+	var shore := PackedVector2Array()
+	for i in 24:
+		var a := TAU * i / 24.0
+		shore.append(Vector2(r.position.x + 6.0, r.end.y - 22.0) + Vector2(cos(a) * 52.0, sin(a) * 36.0))
+	DrawKit.clipped_polygon(ci, shore, PackedVector2Array([r.position, Vector2(r.end.x, r.position.y),
+			r.end, Vector2(r.position.x, r.end.y)]), Color("f0e0b8"))
 	for i in 4:
 		var bx := r.position.x + 15.0 + i * 9.0
 		var tip := Vector2(bx + (i % 2) * 4.0, water_y - 18.0 - (i % 3) * 8.0)
