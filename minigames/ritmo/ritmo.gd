@@ -19,6 +19,17 @@ const MAX_FEEDBACK := 24
 
 const KIND_A := 0
 const KIND_B := 1
+# Ambiente: escenario de concierto diurno, pastel y luminoso.
+const STAGE_TOP := Color("e4ecfb")
+const STAGE_BOTTOM := Color("fff0da")
+const SPEAKER := Color("b9c6d6")
+const SPEAKER_DARK := Color("93a4b8")
+const SPEAKER_LIGHT := Color("d6e0ea")
+const GARLAND := Color("cfd8e0")
+const BULB_COLORS: Array[Color] = [
+	Color("ffb3a7"), Color("ffe08a"), Color("a9ddf5"), Color("c3ecb0"), Color("e0c8f5"),
+]
+const BULB_COUNT := 11
 
 
 class Note:
@@ -185,22 +196,78 @@ func _update_misses() -> void:
 
 # --- Dibujo ---
 
+## Escenario fijo: fondo de concierto, carriles, guirnalda y altavoces.
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, STAGE_TOP, STAGE_BOTTOM)
+	var n := maxi(1, _tracks.size())
+	var lane_h := (ARENA.size.y - 16.0) / float(n)
+	# Fondos y separadores de carril.
+	for i in _tracks.size():
+		var y := ARENA.position.y + 8.0 + lane_h * (float(i) + 0.5)
+		var col := _tracks[i].player.color
+		DrawKit.clipped_polygon(ci, PackedVector2Array([
+			Vector2(ARENA.position.x + 6, y - lane_h * 0.5 + 2),
+			Vector2(ARENA.end.x - 6, y - lane_h * 0.5 + 2),
+			Vector2(ARENA.end.x - 6, y + lane_h * 0.5 - 2),
+			Vector2(ARENA.position.x + 6, y + lane_h * 0.5 - 2)]), clip, Color(col, 0.05))
+		if i > 0:
+			ci.draw_line(Vector2(ARENA.position.x + 20, y - lane_h * 0.5),
+					Vector2(ARENA.end.x - 20, y - lane_h * 0.5), Color("e4e9ee"), 2.0)
+	# Guirnalda de bombillas (el cable y los casquillos; las bombillas van en _draw).
+	var bulbs := _garland_points()
+	ci.draw_polyline(bulbs, Color(GARLAND, 0.9), 2.0, true)
+	for p in bulbs:
+		ci.draw_circle(p, 3.0, SPEAKER)
+	_draw_speaker(ci, Vector2(ARENA.position.x + 60, ARENA.end.y - 26))
+	_draw_speaker(ci, Vector2(ARENA.end.x - 60, ARENA.end.y - 26))
+	DrawKit.arena_border(ci, ARENA)
+
+
+func _garland_points() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var x0 := ARENA.position.x + 70.0
+	var x1 := ARENA.end.x - 70.0
+	for i in BULB_COUNT:
+		var t := float(i) / float(BULB_COUNT - 1)
+		pts.append(Vector2(lerpf(x0, x1, t), ARENA.position.y + 18.0 + sin(t * PI) * 24.0))
+	return pts
+
+
+func _draw_speaker(ci: CanvasItem, center: Vector2) -> void:
+	var st := StyleBoxFlat.new()
+	st.bg_color = SPEAKER
+	st.border_color = SPEAKER_DARK
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(14)
+	st.shadow_color = WiiTheme.SHADOW
+	st.shadow_size = 4
+	st.shadow_offset = Vector2(0, 2)
+	st.anti_aliasing = true
+	ci.draw_style_box(st, Rect2(center - Vector2(36, 22), Vector2(72, 44)))
+	for i in 2:
+		var c := center + Vector2(0, -8.0 + i * 16.0)
+		ci.draw_circle(c, 8.5, SPEAKER_DARK)
+		ci.draw_circle(c, 5.5, SPEAKER_LIGHT)
+		ci.draw_circle(c - Vector2(2, 2), 1.8, Color(1, 1, 1, 0.7))
+
+
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
+	# Bombillas: laten con el beat (11 formas pequeñas, coste mínimo).
+	var bulbs := _garland_points()
+	for i in bulbs.size():
+		var c: Color = BULB_COLORS[i % BULB_COLORS.size()]
+		var local := 1.0 - fmod(_beat_phase + float(i) * 0.17, 1.0)
+		var r := 4.5 + local * 2.5
+		var p: Vector2 = bulbs[i] + Vector2(0, r + 3.0)
+		draw_circle(p, r * 1.9, Color(c, 0.16 * local))
+		draw_circle(p, r, Color(c, 0.6 + 0.35 * local))
+		draw_circle(p - Vector2(r * 0.3, r * 0.3), r * 0.32, Color(1, 1, 1, 0.7))
 	var n := maxi(1, _tracks.size())
 	var lane_h := (ARENA.size.y - 16.0) / float(n)
 	# Pulse del metrónomo: la línea late con cada beat.
 	var pulse := 1.0 - fmod(_beat_phase, 1.0)
 	var line_w := 7.0 + pulse * 6.0
-	# Fondos y separadores de carril.
-	for i in _tracks.size():
-		var y := ARENA.position.y + 8.0 + lane_h * (float(i) + 0.5)
-		var col := _tracks[i].player.color
-		draw_rect(Rect2(ARENA.position.x + 6, y - lane_h * 0.5 + 2, ARENA.size.x - 12, lane_h - 4),
-				Color(col, 0.05))
-		if i > 0:
-			draw_line(Vector2(ARENA.position.x + 20, y - lane_h * 0.5),
-					Vector2(ARENA.end.x - 20, y - lane_h * 0.5), Color("e4e9ee"), 2.0)
 	# Línea de golpeo (pulsa con el beat).
 	draw_line(Vector2(HIT_X, ARENA.position.y + 10), Vector2(HIT_X, ARENA.end.y - 10),
 			Color(WiiTheme.ACCENT, 0.35 + pulse * 0.45), line_w, true)

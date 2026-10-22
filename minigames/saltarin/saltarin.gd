@@ -24,6 +24,20 @@ const SPEED_GAIN := 3.0
 const SPEED_MAX := 430.0
 const GAP_MIN_FRAC := 0.21
 const GAP_MAX_FRAC := 0.79
+# Ambiente: mañana de campo con colinas, nubes y postes de madera.
+const SKY_TOP := Color("cdeafd")
+const SKY_BOTTOM := Color("f4fbf3")
+const HILL_FAR := Color("cfe6bf")
+const HILL_NEAR := Color("a9da8f")
+const LEAF := Color("a9de8a")
+const LEAF_LIGHT := Color("c4edaa")
+const CLOUD_COL := Color(1, 1, 1, 0.9)
+const PARALLAX_FRAC := 0.12   # lo despacio que derivan las nubes respecto a las columnas
+const CLOUDS := [
+	[Vector2(120, 58), 0.95],
+	[Vector2(520, 128), 0.7],
+	[Vector2(880, 74), 0.82],
+]
 
 
 class Bird:
@@ -48,6 +62,7 @@ var _columns: Array[Column] = []
 var _band_rects: Array[Rect2] = []
 var _speed := SPEED_START
 var _spawn_acc := 0.0
+var _parallax := 0.0
 var _panel_style: StyleBoxFlat
 var _column_style: StyleBoxFlat
 
@@ -61,12 +76,15 @@ func _configure() -> void:
 
 
 func _setup() -> void:
-	_panel_style = WiiTheme.panel_style(22)
+	# Franjas translúcidas: dejan ver el cielo y el decorado del fondo.
+	_panel_style = WiiTheme.panel_style(22, Color(1, 1, 1, 0.55), Color(1, 1, 1, 0.26))
+	_panel_style.shadow_size = 0
+	# Postes de madera redondeados (nada que recuerde a tuberías verdes).
 	_column_style = StyleBoxFlat.new()
-	_column_style.bg_color = Color("c6d3dd")
-	_column_style.border_color = Color("a9bac7")
+	_column_style.bg_color = DrawKit.WOOD
+	_column_style.border_color = DrawKit.WOOD_DARK
 	_column_style.set_border_width_all(2)
-	_column_style.set_corner_radius_all(14)
+	_column_style.set_corner_radius_all(16)
 	_column_style.shadow_color = WiiTheme.SHADOW
 	_column_style.shadow_size = 4
 	_column_style.shadow_offset = Vector2(0, 2)
@@ -98,6 +116,7 @@ func _game_start() -> void:
 
 func _game_process(delta: float) -> void:
 	_speed = minf(SPEED_MAX, SPEED_START + elapsed * SPEED_GAIN)
+	_parallax += _speed * PARALLAX_FRAC * delta
 	_spawn_acc += _speed * delta
 	if _spawn_acc >= COLUMN_SPACING:
 		_spawn_acc -= COLUMN_SPACING
@@ -213,9 +232,32 @@ func _circle_rect(center: Vector2, radius: float, rect: Rect2) -> bool:
 
 # --- Dibujo ---
 
-func _draw() -> void:
+## Decorado estático: mañana de campo, con el sol, colinas, césped y las franjas.
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, SKY_TOP, SKY_BOTTOM)
+	DrawKit.sun(ci, Vector2(ARENA.end.x - 108, ARENA.position.y + 90), 38.0)
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 118, 34, HILL_FAR, 0.4, 1.7, clip)
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 64, 22, HILL_NEAR, 2.3, 1.3, clip)
+	# Césped al pie de la arena.
+	DrawKit.hills(ci, ARENA, ARENA.end.y - 34, 7, DrawKit.GRASS, 1.2, 2.4, clip)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 44, ARENA.end.y - 24),
+			Vector2(ARENA.end.x - 44, ARENA.end.y - 24), 26, DrawKit.GRASS_DARK, 5)
+	for i in 6:
+		DrawKit.flower(ci, Vector2(ARENA.position.x + 110 + i * 200, ARENA.end.y - 32 - (i % 2) * 10),
+				4, Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
+	# Franjas de cada jugador, translúcidas sobre el paisaje.
 	for band in _band_rects:
-		draw_style_box(_panel_style, band)
+		ci.draw_style_box(_panel_style, band)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Solo lo que se mueve: nubes en parallax, columnas y pájaros.
+func _draw() -> void:
+	for c in CLOUDS:
+		var base: Vector2 = c[0]
+		var x := ARENA.position.x + 80.0 + fposmod(base.x - _parallax, ARENA.size.x - 160.0)
+		DrawKit.cloud(self, Vector2(x, ARENA.position.y + base.y), c[1], CLOUD_COL)
 	for col in _columns:
 		for band in _band_rects:
 			_draw_column(col, band)
@@ -226,19 +268,36 @@ func _draw() -> void:
 
 
 func _draw_column(col: Column, band: Rect2) -> void:
-	var left := col.x - COLUMN_WIDTH * 0.5
+	if col.x + COLUMN_WIDTH * 0.5 <= band.position.x or col.x - COLUMN_WIDTH * 0.5 >= band.end.x:
+		return
 	var band_h := band.size.y
 	var gap_h := minf(band_h * GAP_FRAC, MAX_GAP)
 	var gap_top := band.position.y + col.gap_center * band_h - gap_h * 0.5
 	var gap_bottom := gap_top + gap_h
 	var top_h := gap_top - band.position.y
 	var bottom_h := band.end.y - gap_bottom
-	if top_h > 2.0 and col.x + COLUMN_WIDTH * 0.5 > band.position.x \
-			and col.x - COLUMN_WIDTH * 0.5 < band.end.x:
-		draw_style_box(_column_style, Rect2(left, band.position.y, COLUMN_WIDTH, top_h))
-	if bottom_h > 2.0 and col.x + COLUMN_WIDTH * 0.5 > band.position.x \
-			and col.x - COLUMN_WIDTH * 0.5 < band.end.x:
-		draw_style_box(_column_style, Rect2(left, gap_bottom, COLUMN_WIDTH, bottom_h))
+	if top_h > 2.0:
+		_draw_post(Rect2(col.x - COLUMN_WIDTH * 0.5, band.position.y, COLUMN_WIDTH, top_h), gap_top, false)
+	if bottom_h > 2.0:
+		_draw_post(Rect2(col.x - COLUMN_WIDTH * 0.5, gap_bottom, COLUMN_WIDTH, bottom_h), gap_bottom, true)
+
+
+## Poste de madera con vetas y copa de hojas en el extremo que mira al hueco.
+func _draw_post(rect: Rect2, tip_y: float, tip_at_bottom: bool) -> void:
+	draw_style_box(_column_style, rect)
+	var cx := rect.position.x + COLUMN_WIDTH * 0.5
+	if rect.size.y > 44.0:
+		draw_line(Vector2(cx - 9, rect.position.y + 16), Vector2(cx - 9, rect.end.y - 16),
+				Color(DrawKit.WOOD_DARK, 0.28), 2.0, true)
+		draw_line(Vector2(cx + 10, rect.position.y + 24), Vector2(cx + 10, rect.end.y - 24),
+				Color(DrawKit.WOOD_DARK, 0.18), 2.0, true)
+	# Las hojas quedan dentro del poste (solo 3 px de vuelo): el hueco se lee igual
+	# que la caja de colisión.
+	var inset := -10.0 if tip_at_bottom else 10.0
+	for i in 3:
+		var dx := (i - 1) * 13.0
+		draw_circle(Vector2(cx + dx, tip_y + inset), 13.0, LEAF)
+	draw_circle(Vector2(cx, tip_y + inset * 0.6), 12.0, LEAF_LIGHT)
 
 
 func _draw_bird(bird: Bird) -> void:
@@ -255,6 +314,13 @@ func _draw_bird(bird: Bird) -> void:
 	draw_circle(Vector2.ZERO, BIRD_RADIUS, Color(col, alpha))
 	draw_circle(Vector2(-BIRD_RADIUS * 0.3, -BIRD_RADIUS * 0.35), BIRD_RADIUS * 0.38,
 			Color(1, 1, 1, 0.45 * alpha))
+	# Ala y ojo, dentro de la bola (el tamaño no cambia).
+	draw_circle(Vector2(-BIRD_RADIUS * 0.18, BIRD_RADIUS * 0.22), BIRD_RADIUS * 0.4,
+			Color(col.darkened(0.16), alpha))
+	draw_circle(Vector2(BIRD_RADIUS * 0.34, -BIRD_RADIUS * 0.3), BIRD_RADIUS * 0.17,
+			Color(1, 1, 1, 0.9 * alpha))
+	draw_circle(Vector2(BIRD_RADIUS * 0.38, -BIRD_RADIUS * 0.3), BIRD_RADIUS * 0.08,
+			Color(0.2, 0.3, 0.4, 0.8 * alpha))
 	draw_colored_polygon(PackedVector2Array([
 		Vector2(BIRD_RADIUS * 0.8, 0),
 		Vector2(BIRD_RADIUS * 0.8 + 9, -4),

@@ -16,6 +16,16 @@ const PETAL_COLORS: Array[Color] = [
 ]
 const DIRS: Array[int] = [Pad.UP, Pad.RIGHT, Pad.DOWN, Pad.LEFT]
 const DIR_VECS := [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]
+# Ambiente: pequeño teatro con telones pastel, tablas claras y foco suave.
+const STAGE_TOP := Color("e9def9")
+const STAGE_BOTTOM := Color("fdf1e2")
+const CURTAIN := Color("e7a9c0")
+const CURTAIN_DARK := Color("d68aa8")
+const CURTAIN_LIGHT := Color("f5c4d5")
+const FLOOR := Color("eedcbd")
+const FLOOR_DARK := Color("d9c096")
+const SPOTLIGHT := Color(1.0, 0.98, 0.82, 0.24)
+const MOTE := Color(1.0, 0.94, 0.62)
 
 enum Phase { WATCH, REPEAT, GAP }
 
@@ -34,6 +44,7 @@ var _phase_t := 0.0
 var _round := 0
 var _pressed_flash: Array[float] = [0.0, 0.0, 0.0, 0.0]
 var _watch_played := -1
+var _amb_t := 0.0
 
 
 func _configure() -> void:
@@ -79,6 +90,7 @@ func _next_round() -> void:
 
 
 func _game_process(delta: float) -> void:
+	_amb_t += delta
 	for d in 4:
 		_pressed_flash[d] = maxf(0.0, _pressed_flash[d] - delta)
 	match _phase:
@@ -166,8 +178,66 @@ func _try_input(s: MemPlayer) -> void:
 
 # --- Dibujo ---
 
+## Escenario fijo del teatrillo: pared, tablas, foco y telones.
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, STAGE_TOP, STAGE_BOTTOM)
+	var floor_y := ARENA.end.y - 116.0
+	# Suelo de tablas claras.
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(ARENA.position.x, floor_y), Vector2(ARENA.end.x, floor_y),
+		ARENA.end, Vector2(ARENA.position.x, ARENA.end.y)]), clip, FLOOR)
+	for i in 5:
+		var ly := floor_y + 22.0 + i * 23.0
+		ci.draw_line(Vector2(ARENA.position.x + 30, ly), Vector2(ARENA.end.x - 30, ly),
+				Color(FLOOR_DARK, 0.7), 2.0, true)
+	var px := ARENA.position.x + 96.0
+	while px < ARENA.end.x - 40.0:
+		ci.draw_line(Vector2(px, floor_y + 18), Vector2(px, ARENA.end.y - 8),
+				Color(FLOOR_DARK, 0.45), 2.0, true)
+		px += 152.0
+	# Foco de luz suave bajo el panel de direcciones.
+	DrawKit.ellipse(ci, Vector2(640, 408), Vector2(330, 220), SPOTLIGHT)
+	DrawKit.ellipse(ci, Vector2(640, 408), Vector2(210, 150), Color(1.0, 0.99, 0.9, 0.22))
+	# Telones laterales con pliegues.
+	_draw_side_curtain(ci, clip, ARENA.position.x, floor_y)
+	_draw_side_curtain(ci, clip, ARENA.end.x - 150.0, floor_y)
+	# Guardamalleta superior ondulada, muy clara para que el texto de fase se lea.
+	var val_h := 34.0
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		ARENA.position, Vector2(ARENA.end.x, ARENA.position.y),
+		Vector2(ARENA.end.x, ARENA.position.y + val_h),
+		Vector2(ARENA.position.x, ARENA.position.y + val_h)]), clip, Color("f9e4ec"))
+	var bx := ARENA.position.x + 52.0
+	while bx < ARENA.end.x - 26.0:
+		DrawKit.ellipse(ci, Vector2(bx, ARENA.position.y + val_h), Vector2(24, 10), CURTAIN_LIGHT)
+		bx += 52.0
+	ci.draw_line(Vector2(ARENA.position.x + 34, ARENA.position.y + 10),
+			Vector2(ARENA.end.x - 34, ARENA.position.y + 10), Color("e8c46a"), 3.0, true)
+	DrawKit.arena_border(ci, ARENA)
+
+
+func _draw_side_curtain(ci: CanvasItem, clip: PackedVector2Array, x: float, floor_y: float) -> void:
+	var w := 150.0
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(x, ARENA.position.y), Vector2(x + w, ARENA.position.y),
+		Vector2(x + w, floor_y), Vector2(x, floor_y)]), clip, CURTAIN)
+	for i in 4:
+		var fx := x + 14.0 + i * 36.0
+		DrawKit.clipped_polygon(ci, PackedVector2Array([
+			Vector2(fx, ARENA.position.y), Vector2(fx + 15.0, ARENA.position.y),
+			Vector2(fx + 15.0, floor_y), Vector2(fx, floor_y)]), clip,
+			CURTAIN_DARK if i % 2 == 0 else CURTAIN_LIGHT)
+
+
+## Solo lo que se mueve: motas de polvo en el foco, pétalos, textos y jugadores.
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
+	# Motas doradas flotando despacio en el haz de luz.
+	for i in 4:
+		var mt := fmod(_amb_t * 0.3 + i * 0.27, 1.0)
+		var mx := 640.0 + sin(_amb_t * 0.8 + i * 1.7) * (70.0 + i * 22.0)
+		var my := 552.0 - mt * 200.0
+		draw_circle(Vector2(mx, my), 3.0 + float(i % 2), Color(MOTE, 0.45 * sin(mt * PI)))
 	var center := Vector2(640, 396)
 	var lit := _lit_index()
 	for d in 4:
@@ -210,21 +280,26 @@ func _draw_petal(center: Vector2, d: int, is_lit: bool, flash: bool) -> void:
 	var off: Vector2 = DIR_VECS[d] * PETAL_DIST
 	var pos: Vector2 = center + off
 	var base: Color = PETAL_COLORS[d]
-	var col := base if (is_lit or flash) else base.lerp(Color.WHITE, 0.42)
+	var active := is_lit or flash
+	var col := base if active else base.lerp(Color.WHITE, 0.42)
 	draw_circle(pos + Vector2(0, 8), PETAL_RADIUS + 4.0, WiiTheme.SHADOW)
-	if is_lit or flash:
-		draw_circle(pos, PETAL_RADIUS + 12.0, Color(base, 0.35))
+	if active:
+		# Encendido claro: halo y botón saturado, imposible confundirlo.
+		draw_circle(pos, PETAL_RADIUS + 16.0, Color(base, 0.30))
+		draw_circle(pos, PETAL_RADIUS + 5.0, Color(base, 0.5))
 	draw_circle(pos, PETAL_RADIUS, col)
 	draw_circle(pos + Vector2(0, PETAL_RADIUS * 0.18), PETAL_RADIUS * 0.78, col.darkened(0.06))
 	draw_circle(pos + Vector2(-PETAL_RADIUS * 0.3, -PETAL_RADIUS * 0.34), PETAL_RADIUS * 0.34,
-			Color(1, 1, 1, 0.4))
-	# Triángulo que apunta hacia fuera (sin flechas Unicode).
+			Color(1, 1, 1, 0.42))
+	draw_arc(pos, PETAL_RADIUS - 1.0, 0, TAU, 32, Color(1, 1, 1, 0.6), 3.0, true)
+	# Triángulo que apunta hacia fuera (sin flechas Unicode), en tono oscuro para
+	# que se lea tanto apagado como encendido.
 	var dir: Vector2 = DIR_VECS[d]
 	var tip := pos + dir * PETAL_RADIUS * 0.5
 	var side := dir.orthogonal() * PETAL_RADIUS * 0.22
 	var pts := PackedVector2Array([tip, pos + dir * PETAL_RADIUS * 0.08 + side,
 			pos + dir * PETAL_RADIUS * 0.08 - side])
-	draw_colored_polygon(pts, Color(1, 1, 1, 0.85))
+	draw_colored_polygon(pts, Color(base.darkened(0.32), 0.92))
 
 
 func _draw_players_row() -> void:
