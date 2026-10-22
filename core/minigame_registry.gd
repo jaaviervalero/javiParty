@@ -1,5 +1,5 @@
 class_name MinigameRegistry
-extends RefCounted
+extends Reference
 ## Lista de minijuegos disponibles. Cada entrada: id (carpeta en res://minigames/),
 ## escena y título en los dos idiomas (para el selector, sin tener que cargar la escena).
 ## Fuera del catálogo (código conservado): lluvia, carrera.

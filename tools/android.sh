@@ -14,8 +14,8 @@ PKG="com.javiparty.app"
 
 echo "== Exportando $APK"
 mkdir -p build
-godot --headless --path . --import >/dev/null 2>&1
-out=$(godot --headless --path . --export-debug "Android TV" "$APK" 2>&1) || true
+godot3 --headless --path . --editor --quit >/dev/null 2>&1
+out=$(godot3 --headless --path . --export-debug "Android TV" "$APK" 2>&1) || true
 if [ ! -f "$APK" ] || echo "$out" | grep -qE "ERROR|failed"; then
 	echo "$out" | grep -vE "^$|^Godot" | tail -20
 	[ -f "$APK" ] || { echo "!! La exportación falló"; exit 1; }

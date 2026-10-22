@@ -1,8 +1,11 @@
 class_name WiiTheme
-extends RefCounted
+extends Reference
 ## Tema visual propio inspirado en las consolas de salón de los 2000: fondo
 ## blanco/gris claro, acento cian, píldoras redondeadas con brillo y fuente
 ## redondeada (Nunito, OFL). Todo generado por código, sin assets de terceros.
+##
+## En Godot 3.6 el tamaño va DENTRO de la fuente (DynamicFont), así que aquí solo
+## se dan las fuentes ya dimensionadas: font(weight, size).
 
 const BG_TOP := Color("fbfcfd")
 const BG_BOTTOM := Color("e3e8ed")
@@ -16,16 +19,9 @@ const ACCENT_DARK := Color("1b8fc0")
 const ACCENT_LIGHT := Color("e6f7fd")
 const SHADOW := Color(0.2, 0.3, 0.4, 0.14)
 
-const FONT_PATH := "res://assets/fonts/Nunito.ttf"
 
-
-static func font(weight := 600) -> Font:
-	var base: FontFile = load(FONT_PATH)
-	var f := FontVariation.new()
-	f.base_font = base
-	var ts := TextServerManager.get_primary_interface()
-	f.variation_opentype = {ts.name_to_tag("wght"): weight}
-	return f
+static func font(weight := 600, size := 22) -> DynamicFont:
+	return Fonts.get_font(weight, size)
 
 
 static func panel_style(radius := 22, border := PANEL_BORDER, bg := PANEL) -> StyleBoxFlat:
@@ -38,14 +34,15 @@ static func panel_style(radius := 22, border := PANEL_BORDER, bg := PANEL) -> St
 	s.shadow_size = 6
 	s.shadow_offset = Vector2(0, 3)
 	s.anti_aliasing = true
-	s.set_content_margin_all(18)
+	s.content_margin_left = 18
+	s.content_margin_right = 18
+	s.content_margin_top = 18
+	s.content_margin_bottom = 18
 	return s
 
 
 static func build() -> Theme:
 	var t := Theme.new()
-	t.default_font = font(600)
-	t.default_font_size = 22
 
 	# --- Botón píldora ---
 	var normal := panel_style(28)
@@ -53,14 +50,14 @@ static func build() -> Theme:
 	normal.content_margin_right = 28
 	normal.content_margin_top = 12
 	normal.content_margin_bottom = 12
-	var hover := normal.duplicate() as StyleBoxFlat
+	var hover: StyleBoxFlat = normal.duplicate()
 	hover.bg_color = ACCENT_LIGHT
 	hover.border_color = ACCENT
 	hover.set_border_width_all(3)
-	var pressed := hover.duplicate() as StyleBoxFlat
+	var pressed: StyleBoxFlat = hover.duplicate()
 	pressed.bg_color = Color("c9ecfa")
 	pressed.shadow_size = 2
-	var disabled := normal.duplicate() as StyleBoxFlat
+	var disabled: StyleBoxFlat = normal.duplicate()
 	disabled.bg_color = Color("f1f3f5")
 	# El foco (mando de la tele) se ve como un halo cian grueso alrededor.
 	var focus := StyleBoxFlat.new()
@@ -83,11 +80,14 @@ static func build() -> Theme:
 	t.set_color("font_pressed_color", "Button", ACCENT_DARK)
 	t.set_color("font_hover_pressed_color", "Button", ACCENT_DARK)
 	t.set_color("font_disabled_color", "Button", TEXT_SOFT)
+	t.set_font("font", "Button", font(700, 24))
 
 	# --- Paneles y textos ---
 	t.set_stylebox("panel", "PanelContainer", panel_style())
 	t.set_stylebox("panel", "Panel", panel_style())
 	t.set_color("font_color", "Label", TEXT)
+	t.set_font("font", "Label", font(600, 22))
+	t.set_font("font", "LineEdit", font(600, 24))
 
 	# --- Campo de texto ---
 	var le := panel_style(16)
@@ -96,12 +96,13 @@ static func build() -> Theme:
 	le.content_margin_top = 10
 	le.content_margin_bottom = 10
 	le.shadow_size = 0
-	var le_focus := focus.duplicate() as StyleBoxFlat
+	var le_focus: StyleBoxFlat = focus.duplicate()
 	le_focus.set_corner_radius_all(18)
 	t.set_stylebox("normal", "LineEdit", le)
 	t.set_stylebox("focus", "LineEdit", le_focus)
 	t.set_color("font_color", "LineEdit", TEXT)
-	t.set_color("caret_color", "LineEdit", ACCENT_DARK)
+	t.set_color("cursor_color", "LineEdit", ACCENT_DARK)
+	t.set_color("selection_color", "LineEdit", ACCENT_LIGHT)
 	t.set_color("font_placeholder_color", "LineEdit", TEXT_SOFT)
-	t.set_font_size("font_size", "LineEdit", 26)
+	t.set_color("font_selected_color", "LineEdit", TEXT)
 	return t

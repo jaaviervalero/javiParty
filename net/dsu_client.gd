@@ -10,9 +10,9 @@ extends Node
 ##   3. Renovación de la suscripción cada KEEPALIVE_SEC; el servidor deja de enviar
 ##      si no se renueva y no avisa al desconectarse, así que aplicamos TIMEOUT_MSEC.
 
-signal controller_connected(ctrl: DSUController)
-signal controller_disconnected(ctrl: DSUController)
-signal controller_updated(ctrl: DSUController)
+signal controller_connected(ctrl)
+signal controller_disconnected(ctrl)
+signal controller_updated(ctrl)
 
 const KEEPALIVE_SEC := 1.0
 const INFO_REFRESH_SEC := 2.0
@@ -36,7 +36,7 @@ var _info_timer := 0.0
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_mode = Node.PAUSE_MODE_PROCESS
 	process_priority = -100  # antes que cualquier escena que lea los mandos
 	client_id = randi()
 	_bind()
@@ -44,17 +44,19 @@ func _ready() -> void:
 
 func _bind() -> void:
 	# Solo IPv4: así el broadcast del escáner funciona sin sorpresas de dual-stack.
-	var err := _udp.bind(0, "0.0.0.0")
+	var err := _udp.listen(0, "0.0.0.0")
 	if err != OK:
 		for p in range(26761, 26800):
-			err = _udp.bind(p, "0.0.0.0")
+			err = _udp.listen(p, "0.0.0.0")
 			if err == OK:
 				break
 	if err != OK:
-		push_error("DSUClient: no se pudo abrir un puerto UDP local (%s)" % error_string(err))
+		push_error("DSUClient: no se pudo abrir un puerto UDP local (%s)" % str(err))
 		return
 	_udp.set_broadcast_enabled(true)
-	local_port = _udp.get_local_port()
+	# Godot 3.6 no expone el puerto local del socket (no hay get_local_port),
+	# así que se queda en 0. Solo lo muestra el overlay de depuración.
+	local_port = 0
 
 
 # --- API pública ---
@@ -74,7 +76,7 @@ func remove_server(ip: String, port := DSUProtocol.PORT) -> void:
 		if c.ip == ip and c.port == port:
 			if c.connected:
 				c.mark_disconnected()
-				controller_disconnected.emit(c)
+				emit_signal("controller_disconnected", c)
 			controllers.erase(k)
 
 
@@ -86,8 +88,8 @@ func server_count() -> int:
 	return _servers.size()
 
 
-func connected_controllers() -> Array[DSUController]:
-	var out: Array[DSUController] = []
+func connected_controllers() -> Array:
+	var out: Array = []
 	for c in controllers.values():
 		if c.connected:
 			out.append(c)
@@ -112,11 +114,11 @@ func _process(delta: float) -> void:
 		for s in _servers.values():
 			_send_info_request(s)
 
-	var now := Time.get_ticks_msec()
+	var now := OS.get_ticks_msec()
 	for c in controllers.values():
 		if c.connected and now - c.last_data_msec > TIMEOUT_MSEC:
 			c.mark_disconnected()
-			controller_disconnected.emit(c)
+			emit_signal("controller_disconnected", c)
 
 
 func _poll() -> void:
@@ -145,7 +147,7 @@ func _on_info(ip: String, port: int, msg: Dictionary) -> void:
 	var server: Dictionary = _servers[k]
 	# RTT: la primera respuesta tras cada petición (llegan hasta 4, una por slot).
 	if server.info_sent_usec > 0:
-		server.rtt_ms = (Time.get_ticks_usec() - server.info_sent_usec) / 1000.0
+		server.rtt_ms = (OS.get_ticks_usec() - server.info_sent_usec) / 1000.0
 		server.info_sent_usec = 0
 
 	var ck := "%s:%d#%d" % [ip, port, msg.slot]
@@ -155,7 +157,7 @@ func _on_info(ip: String, port: int, msg: Dictionary) -> void:
 			ctrl = DSUController.new(ip, port, msg.slot)
 			controllers[ck] = ctrl
 		ctrl.apply_info(msg)
-		if not ctrl.connected and Time.get_ticks_msec() - ctrl.subscribed_msec > 500:
+		if not ctrl.connected and OS.get_ticks_msec() - ctrl.subscribed_msec > 500:
 			_send_data_request(ctrl)  # no esperar al siguiente keep-alive
 	if ctrl:
 		ctrl.rtt_ms = server.rtt_ms
@@ -180,26 +182,26 @@ func _on_data(ip: String, port: int, msg: Dictionary) -> void:
 		ctrl.dropped_old += 1
 		return
 
-	ctrl.apply_data(msg, Time.get_ticks_usec())
+	ctrl.apply_data(msg, OS.get_ticks_usec())
 	if not ctrl.connected:
 		ctrl.connected = true
-		controller_connected.emit(ctrl)
-	controller_updated.emit(ctrl)
+		emit_signal("controller_connected", ctrl)
+	emit_signal("controller_updated", ctrl)
 
 
 # --- Envío ---
 
-func _send(ip: String, port: int, pkt: PackedByteArray) -> void:
+func _send(ip: String, port: int, pkt: PoolByteArray) -> void:
 	_udp.set_dest_address(ip, port)
 	_udp.put_packet(pkt)
 
 
 func _send_info_request(server: Dictionary) -> void:
-	server.info_sent_usec = Time.get_ticks_usec()
+	server.info_sent_usec = OS.get_ticks_usec()
 	_send(server.ip, server.port, DSUProtocol.build_info_request([0, 1, 2, 3], client_id))
 
 
 func _send_data_request(ctrl: DSUController) -> void:
-	ctrl.subscribed_msec = Time.get_ticks_msec()
+	ctrl.subscribed_msec = OS.get_ticks_msec()
 	# Suscripción por slot (flag 1); la MAC va a cero porque no se usa.
-	_send(ctrl.ip, ctrl.port, DSUProtocol.build_data_request(1, ctrl.slot, PackedByteArray(), client_id))
+	_send(ctrl.ip, ctrl.port, DSUProtocol.build_data_request(1, ctrl.slot, PoolByteArray(), client_id))

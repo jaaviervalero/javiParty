@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Rey de la colina" para el selector: pradera y zona dorada.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:
@@ -8,14 +8,14 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	DrawKit.ellipse(ci, r.position + r.size * Vector2(0.7, 0.7), Vector2(62.0, 26.0), Color("c6ea9f", 0.35))
 	# Camino de tierra.
 	var path_y := r.position.y + r.size.y * 0.78
-	ci.draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PoolVector2Array([
 		Vector2(r.position.x, path_y), Vector2(r.end.x, path_y - 14.0),
 		Vector2(r.end.x, path_y + 12.0), Vector2(r.position.x, path_y + 26.0)]),
 		Color("e8d6a8", 0.6))
 	# Flores.
 	for p in [Vector2(0.12, 0.72), Vector2(0.2, 0.5), Vector2(0.85, 0.36), Vector2(0.72, 0.82),
 			Vector2(0.48, 0.16)]:
-		DrawKit.flower(ci, r.position + r.size * p, 5.0, Color.WHITE)
+		DrawKit.flower(ci, r.position + r.size * p, 5.0, Color(1, 1, 1, 1))
 	# Zona brillante.
 	var c := r.position + Vector2(r.size.x * 0.48, r.size.y * 0.56)
 	var zr := 34.0

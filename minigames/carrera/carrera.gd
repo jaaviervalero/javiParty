@@ -35,11 +35,11 @@ class Runner:
 	var arrival := 0.0
 	var place := 0
 	var lane := Rect2()
-	var cleared: Array[bool] = []
-	var missed: Array[bool] = []
+	var cleared: Array = []
+	var missed: Array = []
 
 
-var _runners: Array[Runner] = []
+var _runners: Array = []
 var _finish_count := 0
 var _ending := false
 var _end_t := 0.0
@@ -123,9 +123,9 @@ func _game_end() -> void:
 
 
 func _update_runner(runner: Runner, delta: float) -> void:
-	runner.squash = lerpf(runner.squash, 1.0, minf(1.0, delta * 10.0))
-	runner.stumble_t = maxf(0.0, runner.stumble_t - delta)
-	runner.jump_t = maxf(0.0, runner.jump_t - delta)
+	runner.squash = lerp(runner.squash, 1.0, min(1.0, delta * 10.0))
+	runner.stumble_t = max(0.0, runner.stumble_t - delta)
+	runner.jump_t = max(0.0, runner.jump_t - delta)
 	if runner.finished:
 		runner.speed = 0.0
 		return
@@ -140,7 +140,7 @@ func _update_runner(runner: Runner, delta: float) -> void:
 			_jump(runner)
 
 	if runner.stumble_t <= 0.0:
-		runner.speed = maxf(0.0, runner.speed - DECAY * delta)
+		runner.speed = max(0.0, runner.speed - DECAY * delta)
 
 	runner.meters += runner.speed * delta
 
@@ -159,7 +159,7 @@ func _update_runner(runner: Runner, delta: float) -> void:
 		runner.place = _finish_count + 1
 		_finish_count += 1
 		set_score(p, runner.arrival)
-		Sfx.play("star", randf_range(0.95, 1.1))
+		Sfx.play("star", rand_range(0.95, 1.1))
 		if _finish_count == _runners.size():
 			_ending = true
 			_end_t = 0.0
@@ -171,9 +171,9 @@ func _press(runner: Runner, btn: int) -> void:
 		runner.last_btn = 0
 		return
 	runner.last_btn = btn
-	runner.speed = minf(MAX_SPEED, runner.speed + IMPULSE)
+	runner.speed = min(MAX_SPEED, runner.speed + IMPULSE)
 	runner.squash = 1.18
-	Sfx.play("move", randf_range(1.15, 1.45))
+	Sfx.play("move", rand_range(1.15, 1.45))
 
 
 func _jump(runner: Runner) -> void:
@@ -185,11 +185,11 @@ func _jump(runner: Runner) -> void:
 	for i in HURDLES.size():
 		if runner.cleared[i] or runner.missed[i]:
 			continue
-		if absf(runner.meters - HURDLES[i]) <= JUMP_WINDOW:
+		if abs(runner.meters - HURDLES[i]) <= JUMP_WINDOW:
 			runner.cleared[i] = true
 			cleared_one = true
 	if cleared_one:
-		Sfx.play("pop", randf_range(1.0, 1.2))
+		Sfx.play("pop", rand_range(1.0, 1.2))
 	else:
 		Sfx.play("dash", 1.4)
 
@@ -199,11 +199,11 @@ func _stumble(runner: Runner) -> void:
 		return
 	runner.stumble_t = STUMBLE_TIME
 	runner.speed *= STUMBLE_KEEP
-	Sfx.play("back", randf_range(0.9, 1.05))
+	Sfx.play("back", rand_range(0.9, 1.05))
 
 
 func _meter_to_x(meters: float) -> float:
-	return _start_x + (_finish_x - _start_x) * clampf(meters / FINISH_METERS, 0.0, 1.0)
+	return _start_x + (_finish_x - _start_x) * clamp(meters / FINISH_METERS, 0.0, 1.0)
 
 
 func _ordinal(n: int) -> String:
@@ -247,8 +247,8 @@ func _draw_track_marks(lane: Rect2) -> void:
 	var y := lane.position.y
 	var k := 0
 	while y < lane.end.y:
-		var col := Color("5b6670") if k % 2 == 0 else Color.WHITE
-		var h := minf(sq, lane.end.y - y)
+		var col := Color("5b6670") if k % 2 == 0 else Color(1, 1, 1, 1)
+		var h := min(sq, lane.end.y - y)
 		draw_rect(Rect2(_finish_x - 5.0, y, 10.0, h), col)
 		y += sq
 		k += 1
@@ -305,14 +305,14 @@ func _draw_runner(runner: Runner) -> void:
 			Vector2(1.0 / runner.squash, runner.squash))
 	var col := runner.player.color
 	if runner.finished:
-		col = col.lerp(Color.WHITE, 0.15)
+		col = col.linear_interpolate(Color(1, 1, 1, 1), 0.15)
 	draw_circle(Vector2.ZERO, RUNNER_RADIUS, col)
 	draw_circle(Vector2(-RUNNER_RADIUS * 0.3, -RUNNER_RADIUS * 0.35),
 			RUNNER_RADIUS * 0.35, Color(1, 1, 1, 0.4))
-	draw_set_transform(Vector2.ZERO)
-	draw_text_centered(str(runner.player.index + 1), Vector2(x, y - lift), 20, Color.WHITE)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_text_centered(str(runner.player.index + 1), Vector2(x, y - lift), 20, Color(1, 1, 1, 1))
 
 	if runner.finished:
-		var tx := clampf(x, ARENA.position.x + 34.0, ARENA.end.x - 34.0)
+		var tx := clamp(x, ARENA.position.x + 34.0, ARENA.end.x - 34.0)
 		draw_text_centered(_ordinal(runner.place), Vector2(tx, y - lift - RUNNER_RADIUS - 18.0),
 				22, runner.player.color.darkened(0.15))

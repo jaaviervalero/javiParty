@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Pajarito saltarín" para el selector: mañana de campo, postes de
 ## madera y el pájaro de un jugador en mitad del hueco.
 
@@ -24,9 +24,9 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	# Pájaro protagonista.
 	var bp := r.position + Vector2(r.size.x * 0.58, r.size.y * 0.5)
 	DrawKit.glossy_ball(ci, bp, 13, Color("2fa8e0"))
-	ci.draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PoolVector2Array([
 		bp + Vector2(11, -1), bp + Vector2(19, -5), bp + Vector2(19, 3)]), Color("f2a33a"))
-	ci.draw_circle(bp + Vector2(5, -5), 2.4, Color.WHITE)
+	ci.draw_circle(bp + Vector2(5, -5), 2.4, Color(1, 1, 1, 1))
 	ci.draw_circle(bp + Vector2(5.6, -5), 1.1, Color(0.2, 0.3, 0.4))
 	# Otra columna asomando por la derecha: sensación de avance.
 	_post(ci, Rect2(r.position.x + r.size.x * 0.86, r.position.y, 20, r.size.y * 0.46),

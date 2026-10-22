@@ -1,8 +1,8 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Sigue la secuencia" para el selector: teatrillo con telones y
 ## los cuatro botones de dirección alrededor de un foco.
 
-const PETAL_COLORS: Array[Color] = [
+const PETAL_COLORS = [
 	Color("9ad4f0"), Color("ffc98f"), Color("f6a9c9"), Color("a9e0a4"),
 ]
 const DIR_VECS := [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]
@@ -47,6 +47,6 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 		ci.draw_circle(pos + Vector2(-5, -6), 6, Color(1, 1, 1, 0.45))
 		var dir: Vector2 = DIR_VECS[d]
 		var tip := pos + dir * 8.5
-		var side := dir.orthogonal() * 3.8
-		ci.draw_colored_polygon(PackedVector2Array([tip, pos + dir * 1.4 + side,
+		var side := dir.tangent() * 3.8
+		ci.draw_colored_polygon(PoolVector2Array([tip, pos + dir * 1.4 + side,
 				pos + dir * 1.4 - side]), Color(base.darkened(0.32), 0.92))

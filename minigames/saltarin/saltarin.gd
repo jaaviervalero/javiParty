@@ -57,9 +57,9 @@ class Column:
 	var scored := false
 
 
-var _birds: Array[Bird] = []
-var _columns: Array[Column] = []
-var _band_rects: Array[Rect2] = []
+var _birds: Array = []
+var _columns: Array = []
+var _band_rects: Array = []
 var _speed := SPEED_START
 var _spawn_acc := 0.0
 var _parallax := 0.0
@@ -115,7 +115,7 @@ func _game_start() -> void:
 
 
 func _game_process(delta: float) -> void:
-	_speed = minf(SPEED_MAX, SPEED_START + elapsed * SPEED_GAIN)
+	_speed = min(SPEED_MAX, SPEED_START + elapsed * SPEED_GAIN)
 	_parallax += _speed * PARALLAX_FRAC * delta
 	_spawn_acc += _speed * delta
 	if _spawn_acc >= COLUMN_SPACING:
@@ -133,9 +133,9 @@ func _game_process(delta: float) -> void:
 					add_score(bird.player)
 					scored_any = true
 			if scored_any:
-				Sfx.play("star", randf_range(1.0, 1.15))
+				Sfx.play("star", rand_range(1.0, 1.15))
 
-	var keep: Array[Column] = []
+	var keep: Array = []
 	for col in _columns:
 		if col.x + COLUMN_WIDTH * 0.5 > ARENA.position.x - 60.0:
 			keep.append(col)
@@ -159,29 +159,29 @@ func _spawn_column() -> void:
 func _make_column(x: float) -> Column:
 	var col := Column.new()
 	col.x = x
-	col.gap_center = randf_range(GAP_MIN_FRAC, GAP_MAX_FRAC)
+	col.gap_center = rand_range(GAP_MIN_FRAC, GAP_MAX_FRAC)
 	return col
 
 
 func _update_bird(bird: Bird, delta: float) -> void:
 	if bird.eliminated:
 		return
-	bird.invuln = maxf(0.0, bird.invuln - delta)
-	bird.squash = lerpf(bird.squash, 1.0, minf(1.0, delta * 10.0))
+	bird.invuln = max(0.0, bird.invuln - delta)
+	bird.squash = lerp(bird.squash, 1.0, min(1.0, delta * 10.0))
 
 	var gravity := GRAVITY_FRAC * bird.band.size.y
 	if bird.player.just_pressed(Pad.A):
 		bird.vy = -FLAP_FRAC * bird.band.size.y
 		bird.squash = 1.3
-		Sfx.play("dash", randf_range(1.1, 1.3))
+		Sfx.play("dash", rand_range(1.1, 1.3))
 
-	bird.vy = minf(MAX_FALL_FRAC * bird.band.size.y, bird.vy + gravity * delta)
+	bird.vy = min(MAX_FALL_FRAC * bird.band.size.y, bird.vy + gravity * delta)
 	bird.pos.y += bird.vy * delta
 
 	var top := bird.band.position.y + BIRD_RADIUS + BAND_PAD
 	var bottom := bird.band.end.y - BIRD_RADIUS - BAND_PAD
 	if bird.pos.y < top or bird.pos.y > bottom:
-		bird.pos.y = clampf(bird.pos.y, top, bottom)
+		bird.pos.y = clamp(bird.pos.y, top, bottom)
 		bird.vy = -bird.vy * 0.4  # rebota; durante la invulnerabilidad no se queda pegado
 		_hit_bird(bird)
 
@@ -196,7 +196,7 @@ func _hit_bird(bird: Bird) -> void:
 		return
 	bird.lives -= 1
 	bird.invuln = INVULN_TIME
-	Sfx.play("back", randf_range(0.9, 1.05))
+	Sfx.play("back", rand_range(0.9, 1.05))
 	if bird.lives <= 0:
 		bird.eliminated = true
 		bird.vy = 0.0
@@ -213,20 +213,20 @@ func _bird_hits_column(bird: Bird, col: Column) -> bool:
 	if bird.pos.x + BIRD_RADIUS <= left or bird.pos.x - BIRD_RADIUS >= right:
 		return false
 	var band_h := bird.band.size.y
-	var gap_h := minf(band_h * GAP_FRAC, MAX_GAP)
+	var gap_h := min(band_h * GAP_FRAC, MAX_GAP)
 	var gap_top := bird.band.position.y + col.gap_center * band_h - gap_h * 0.5
 	var gap_bottom := gap_top + gap_h
 	var top_rect := Rect2(left, bird.band.position.y, COLUMN_WIDTH,
-			maxf(0.0, gap_top - bird.band.position.y))
+			max(0.0, gap_top - bird.band.position.y))
 	var bottom_rect := Rect2(left, gap_bottom, COLUMN_WIDTH,
-			maxf(0.0, bird.band.end.y - gap_bottom))
+			max(0.0, bird.band.end.y - gap_bottom))
 	return _circle_rect(bird.pos, BIRD_RADIUS, top_rect) \
 			or _circle_rect(bird.pos, BIRD_RADIUS, bottom_rect)
 
 
 func _circle_rect(center: Vector2, radius: float, rect: Rect2) -> bool:
-	var closest := Vector2(clampf(center.x, rect.position.x, rect.end.x),
-			clampf(center.y, rect.position.y, rect.end.y))
+	var closest := Vector2(clamp(center.x, rect.position.x, rect.end.x),
+			clamp(center.y, rect.position.y, rect.end.y))
 	return center.distance_squared_to(closest) < radius * radius
 
 
@@ -245,7 +245,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 			Vector2(ARENA.end.x - 44, ARENA.end.y - 24), 26, DrawKit.GRASS_DARK, 5)
 	for i in 6:
 		DrawKit.flower(ci, Vector2(ARENA.position.x + 110 + i * 200, ARENA.end.y - 32 - (i % 2) * 10),
-				4, Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
+				4, Color(1, 1, 1, 1) if i % 2 == 0 else Color("ffd1e3"))
 	# Franjas de cada jugador, translúcidas sobre el paisaje.
 	for band in _band_rects:
 		ci.draw_style_box(_panel_style, band)
@@ -271,7 +271,7 @@ func _draw_column(col: Column, band: Rect2) -> void:
 	if col.x + COLUMN_WIDTH * 0.5 <= band.position.x or col.x - COLUMN_WIDTH * 0.5 >= band.end.x:
 		return
 	var band_h := band.size.y
-	var gap_h := minf(band_h * GAP_FRAC, MAX_GAP)
+	var gap_h := min(band_h * GAP_FRAC, MAX_GAP)
 	var gap_top := band.position.y + col.gap_center * band_h - gap_h * 0.5
 	var gap_bottom := gap_top + gap_h
 	var top_h := gap_top - band.position.y
@@ -295,7 +295,7 @@ func _draw_post(rect: Rect2, tip_y: float, tip_at_bottom: bool) -> void:
 	# que la caja de colisión.
 	var inset := -10.0 if tip_at_bottom else 10.0
 	for i in 3:
-		var dx := (i - 1) * 13.0
+		var dx = (i - 1) * 13.0
 		draw_circle(Vector2(cx + dx, tip_y + inset), 13.0, LEAF)
 	draw_circle(Vector2(cx, tip_y + inset * 0.6), 12.0, LEAF_LIGHT)
 
@@ -321,12 +321,12 @@ func _draw_bird(bird: Bird) -> void:
 			Color(1, 1, 1, 0.9 * alpha))
 	draw_circle(Vector2(BIRD_RADIUS * 0.38, -BIRD_RADIUS * 0.3), BIRD_RADIUS * 0.08,
 			Color(0.2, 0.3, 0.4, 0.8 * alpha))
-	draw_colored_polygon(PackedVector2Array([
+	draw_colored_polygon(PoolVector2Array([
 		Vector2(BIRD_RADIUS * 0.8, 0),
 		Vector2(BIRD_RADIUS * 0.8 + 9, -4),
 		Vector2(BIRD_RADIUS * 0.8 + 9, 4),
 	]), Color("f2a33a", alpha))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_text_centered(str(bird.player.index + 1), bird.pos, 18, Color(1, 1, 1, alpha))
 
 

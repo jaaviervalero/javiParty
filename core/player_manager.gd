@@ -8,22 +8,22 @@ extends Node
 ##   como el mando de la tele, y HOME abre/cierra el overlay de depuración.
 ##   Los botones son los lógicos de Pad (ya traducidos según el diseño del móvil).
 
-signal player_joined(player: Player)
-signal player_left(player: Player)         # desconexión (el hueco se mantiene)
-signal player_reconnected(player: Player)
-signal player_removed(player: Player)      # hueco liberado
+signal player_joined(player)
+signal player_left(player)         # desconexión (el hueco se mantiene)
+signal player_reconnected(player)
+signal player_removed(player)      # hueco liberado
 
 const MAX_PLAYERS := 4
 # Paleta propia por jugador: azul, rojo, verde, naranja.
-const COLORS: Array[Color] = [
+const COLORS := [
 	Color("2fa8e0"), Color("ec5a5a"), Color("4cbf6b"), Color("f2a33a"),
 ]
 
-var players: Array[Player] = [null, null, null, null]
+var players: Array = [null, null, null, null]
 var ui_navigation_enabled := true
 
 # En los menús el móvil va en vertical: cruceta para moverse, A acepta, B atrás.
-const _NAV := {
+var _NAV := {
 	Pad.UP: "ui_up",
 	Pad.DOWN: "ui_down",
 	Pad.LEFT: "ui_left",
@@ -34,22 +34,22 @@ const _NAV := {
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_mode = Node.PAUSE_MODE_PROCESS
 	process_priority = -90  # después de DSUClient, antes que las escenas
-	DSUClient.controller_connected.connect(_on_controller_connected)
-	DSUClient.controller_disconnected.connect(_on_controller_disconnected)
+	DSUClient.connect("controller_connected", self, "_on_controller_connected")
+	DSUClient.connect("controller_disconnected", self, "_on_controller_disconnected")
 
 
-func active_players() -> Array[Player]:
-	var out: Array[Player] = []
+func active_players() -> Array:
+	var out: Array = []
 	for p in players:
 		if p != null:
 			out.append(p)
 	return out
 
 
-func connected_players() -> Array[Player]:
-	var out: Array[Player] = []
+func connected_players() -> Array:
+	var out: Array = []
 	for p in players:
 		if p != null and p.is_connected_now():
 			out.append(p)
@@ -57,25 +57,25 @@ func connected_players() -> Array[Player]:
 
 
 func remove_player(index: int) -> void:
-	var p := players[index]
+	var p = players[index]
 	if p == null:
 		return
 	players[index] = null
-	player_removed.emit(p)
+	emit_signal("player_removed", p)
 
 
-func _on_controller_connected(ctrl: DSUController) -> void:
-	var id := ctrl.device_id()
+func _on_controller_connected(ctrl) -> void:
+	var id: String = ctrl.device_id()
 	for p in players:
 		if p != null and p.device_id == id:
 			p.controller = ctrl
-			player_reconnected.emit(p)
+			emit_signal("player_reconnected", p)
 			return
 	# ¿Este mismo controller ya está asignado con otro id (p. ej. llegó la MAC tarde)?
 	for p in players:
 		if p != null and p.controller == ctrl:
 			p.device_id = id
-			player_reconnected.emit(p)
+			emit_signal("player_reconnected", p)
 			return
 	for i in MAX_PLAYERS:
 		if players[i] == null:
@@ -83,15 +83,15 @@ func _on_controller_connected(ctrl: DSUController) -> void:
 			p.device_id = id
 			p.controller = ctrl
 			players[i] = p
-			player_joined.emit(p)
+			emit_signal("player_joined", p)
 			return
 	# Más de 4 mandos: se ignora (sigue visible en el overlay de depuración).
 
 
-func _on_controller_disconnected(ctrl: DSUController) -> void:
+func _on_controller_disconnected(ctrl) -> void:
 	for p in players:
 		if p != null and p.controller == ctrl:
-			player_left.emit(p)
+			emit_signal("player_left", p)
 
 
 func _process(_delta: float) -> void:

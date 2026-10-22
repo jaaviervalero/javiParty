@@ -1,6 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=2]
 
-[ext_resource type="Script" path="res://minigames/carrera/carrera.gd" id="1"]
+[ext_resource path="res://minigames/carrera/carrera.gd" type="Script" id=1]
 
 [node name="Carrera" type="Node2D"]
-script = ExtResource("1")
+script = ExtResource( 1 )

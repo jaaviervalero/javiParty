@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "A pescar" para el selector: muelle, pescador, caña y pez.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:
@@ -9,14 +9,14 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 			Color("d9f0f8"), Color("b6dfec"))
 	# Orilla de arena con juncos.
 	# Recortada a la miniatura: la elipse sobresale por la izquierda.
-	var shore := PackedVector2Array()
+	var shore := PoolVector2Array()
 	for i in 24:
-		var a := TAU * i / 24.0
+		var a = TAU * i / 24.0
 		shore.append(Vector2(r.position.x + 6.0, r.end.y - 22.0) + Vector2(cos(a) * 52.0, sin(a) * 36.0))
-	DrawKit.clipped_polygon(ci, shore, PackedVector2Array([r.position, Vector2(r.end.x, r.position.y),
+	DrawKit.clipped_polygon(ci, shore, PoolVector2Array([r.position, Vector2(r.end.x, r.position.y),
 			r.end, Vector2(r.position.x, r.end.y)]), Color("f0e0b8"))
 	for i in 4:
-		var bx := r.position.x + 15.0 + i * 9.0
+		var bx = r.position.x + 15.0 + i * 9.0
 		var tip := Vector2(bx + (i % 2) * 4.0, water_y - 18.0 - (i % 3) * 8.0)
 		ci.draw_line(Vector2(bx, r.end.y - 26.0), tip, Color("7fae6a"), 2.0, true)
 		DrawKit.ellipse(ci, tip + Vector2(0, 3.0), Vector2(3.0, 7.0), Color("9a6b4a"))
@@ -41,7 +41,7 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	# Pez grande junto al anzuelo.
 	var fish := Vector2(r.position.x + 164.0, r.position.y + 92.0)
 	DrawKit.ellipse(ci, fish, Vector2(26.0, 14.0), Color("f7c58e"))
-	ci.draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PoolVector2Array([
 		fish + Vector2(20, 0), fish + Vector2(34, -12), fish + Vector2(34, 12)]),
 		Color("e9ae72"))
 	ci.draw_circle(fish + Vector2(-12, -4), 4.0, Color(1, 1, 1, 0.9))

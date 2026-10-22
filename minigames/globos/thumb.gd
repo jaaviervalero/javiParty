@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Infla el globo" para el selector: feria y globo gigante.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:
@@ -15,25 +15,25 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 		var x1 := body.position.x + body.size.x * float(i + 1) / 5.0
 		ci.draw_rect(Rect2(x0, body.position.y, x1 - x0, body.size.y),
 				Color("ffb1a8") if i % 2 == 0 else Color("fff4e0"))
-	ci.draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PoolVector2Array([
 		Vector2(body.position.x - 8.0, body.position.y), Vector2(body.end.x + 8.0, body.position.y),
 		Vector2(cx, body.position.y - 26.0)]), Color("ffb1a8"))
 	ci.draw_line(Vector2(body.position.x - 8.0, body.position.y),
-			Vector2(body.end.x + 8.0, body.position.y), Color.WHITE, 3.0, true)
+			Vector2(body.end.x + 8.0, body.position.y), Color(1, 1, 1, 1), 3.0, true)
 	# Guirnalda de banderines.
 	var x0 := r.position.x + 10.0
 	var x1 := r.end.x - 10.0
 	var y0 := r.position.y + 12.0
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	for i in 13:
 		var t := float(i) / 12.0
-		pts.append(Vector2(lerpf(x0, x1, t), y0 + sin(t * PI) * 20.0))
+		pts.append(Vector2(lerp(x0, x1, t), y0 + sin(t * PI) * 20.0))
 	ci.draw_polyline(pts, Color(WiiTheme.TEXT_SOFT, 0.5), 2.0, true)
 	var cols := [Color("ffb3c1"), Color("ffe08a"), Color("a8e6cf"), Color("b8c9f5"), Color("e3c6f2")]
 	for i in 11:
 		var t := (float(i) + 0.5) / 11.0
-		var p := Vector2(lerpf(x0, x1, t), y0 + sin(t * PI) * 20.0)
-		ci.draw_colored_polygon(PackedVector2Array([
+		var p := Vector2(lerp(x0, x1, t), y0 + sin(t * PI) * 20.0)
+		ci.draw_colored_polygon(PoolVector2Array([
 			p + Vector2(-7.0, 0.0), p + Vector2(7.0, 0.0), p + Vector2(0.0, 14.0)]), cols[i % cols.size()])
 	# Globo protagonista.
 	var c := r.position + Vector2(r.size.x * 0.4, r.size.y * 0.52)
@@ -43,7 +43,7 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	ci.draw_circle(c + Vector2(0, -3.0), 32.0, Color("2fa8e0"))
 	ci.draw_circle(c + Vector2(0, 9.0), 24.0, Color("2fa8e0").darkened(0.08))
 	ci.draw_circle(c + Vector2(-11.0, -13.0), 11.0, Color(1, 1, 1, 0.45))
-	ci.draw_colored_polygon(PackedVector2Array([
+	ci.draw_colored_polygon(PoolVector2Array([
 		c + Vector2(-8.0, 34.0), c + Vector2(8.0, 34.0), c + Vector2(0.0, 44.0)]),
 		Color("2fa8e0").darkened(0.12))
 	# Un segundo globo más pequeño al fondo.

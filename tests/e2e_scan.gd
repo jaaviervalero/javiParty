@@ -1,6 +1,6 @@
 extends Node
 ## Prueba de integración con el simulador (tools/dsu_simulator.py --auto):
-##   godot --headless --path . tests/e2e_scan.tscn
+##   godot3 --headless --path . tests/e2e_scan.tscn
 ## Escanea la red, espera a que aparezca algún mando con datos y lo imprime.
 
 const WAIT_SEC := 8.0
@@ -16,7 +16,7 @@ func _process(delta: float) -> void:
 	if _t < WAIT_SEC:
 		return
 	var ok := false
-	for c: DSUController in DSUClient.controllers.values():
+	for c in DSUClient.controllers.values():
 		print("total=%d intervalo=%.2fms %s conectado=%s pps=%.1f pkt#%d rtt=%.1fms acc=%s botones=[%s] dev=%s" % [
 			c.packets_total, c.interval_ms, c.key, c.connected, c.pps, c.packet_number, c.rtt_ms, c.accel,
 			DSUProtocol.buttons_to_string(c.buttons), c.device_id()])

@@ -14,7 +14,7 @@ PLATFORM="android-35"
 JAVA_HOME="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")}"
 
 # Versión de Godot: "4.7.2.stable.arch_linux.xxx" -> carpeta 4.7.2.stable, release 4.7.2-stable
-GV="$(godot --version | cut -d. -f1-4)"
+GV="$(godot3 --version | cut -d. -f1-4)"
 NUM="${GV%.*}"; KIND="${GV##*.}"
 TPL_DIR="$HOME/.local/share/godot/export_templates/$GV"
 # Temporal en disco (no en /tmp, que suele ser RAM y las plantillas ocupan ~3 GB al descomprimir).
@@ -66,11 +66,11 @@ if [ ! -f "$KS" ]; then
 fi
 
 # --- 4. Configuración del editor de Godot ---
-MINOR="$(echo "$GV" | cut -d. -f1-2)"
+MINOR="$(echo "$GV" | cut -d. -f1)"  # Godot 3 usa editor_settings-3.tres
 ES="$HOME/.config/godot/editor_settings-$MINOR.tres"
 if [ ! -f "$ES" ]; then
 	echo "== Generando configuración del editor"
-	timeout 60 godot --headless --editor --quit --path "$(dirname "$0")/.." >/dev/null 2>&1 || true
+	timeout 60 godot3 --headless --editor --quit --path "$(dirname "$0")/.." >/dev/null 2>&1 || true
 fi
 if [ -f "$ES" ]; then
 	set_setting() {

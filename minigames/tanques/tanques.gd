@@ -50,9 +50,9 @@ class Bullet:
 	var dead := false
 
 
-var _tanks: Array[Tank] = []
-var _bullets: Array[Bullet] = []
-var _blocks: Array[Rect2] = []
+var _tanks: Array = []
+var _bullets: Array = []
+var _blocks: Array = []
 var _targets: Array = []  # [pos, vel, radio]
 var _confetti: Array = []  # [pos, vel, color, vida]
 var _time := 0.0
@@ -116,17 +116,17 @@ func _game_process(delta: float) -> void:
 # --- Tanques ---
 
 func _update_tank(t: Tank, delta: float) -> void:
-	t.cool = maxf(0.0, t.cool - delta)
-	t.boost_cd = maxf(0.0, t.boost_cd - delta)
-	t.boost_t = maxf(0.0, t.boost_t - delta)
-	t.recoil = maxf(0.0, t.recoil - delta * 5.0)
+	t.cool = max(0.0, t.cool - delta)
+	t.boost_cd = max(0.0, t.boost_cd - delta)
+	t.boost_t = max(0.0, t.boost_t - delta)
+	t.recoil = max(0.0, t.recoil - delta * 5.0)
 	if t.dead_t > 0.0:
 		t.dead_t -= delta
 		if t.dead_t <= 0.0:
 			t.pos = t.home
 			t.invuln = INVULN_TIME
 		return
-	t.invuln = maxf(0.0, t.invuln - delta)
+	t.invuln = max(0.0, t.invuln - delta)
 	var p := t.player
 	var dir := p.stick() if p.stick() != Vector2.ZERO else p.dpad().normalized()
 	if dir != Vector2.ZERO:
@@ -151,7 +151,7 @@ func _collide_blocks(t: Tank) -> void:
 		var n := _circle_rect_normal(t.pos, TANK_RADIUS, b)
 		if n != Vector2.ZERO:
 			var closest := _closest_point(t.pos, b)
-			var inside := b.has_point(t.pos)
+			var inside: bool = b.has_point(t.pos)
 			var push := TANK_RADIUS - t.pos.distance_to(closest)
 			if inside:
 				push = TANK_RADIUS + _inside_depth(t.pos, b)
@@ -161,8 +161,8 @@ func _collide_blocks(t: Tank) -> void:
 func _collide_tanks() -> void:
 	for i in _tanks.size():
 		for j in range(i + 1, _tanks.size()):
-			var a := _tanks[i]
-			var b := _tanks[j]
+			var a: Tank = _tanks[i]
+			var b: Tank = _tanks[j]
 			if a.dead_t > 0.0 or b.dead_t > 0.0:
 				continue
 			var d := b.pos - a.pos
@@ -185,7 +185,7 @@ func _fire(t: Tank) -> void:
 	t.cool = BULLET_COOLDOWN
 	t.recoil = 1.0
 	t.pos -= t.aim * 3.0
-	Sfx.play("pop", randf_range(0.75, 0.85))
+	Sfx.play("pop", rand_range(0.75, 0.85))
 
 
 func _own_bullets(t: Tank) -> int:
@@ -206,11 +206,11 @@ func _update_bullets(delta: float) -> void:
 			continue
 		b.pos += b.vel * delta
 		# Paredes de la arena: rebote o fin si ya gastó los dos.
-		var hit_x := b.pos.x <= lo.x or b.pos.x >= hi.x
-		var hit_y := b.pos.y <= lo.y or b.pos.y >= hi.y
+		var hit_x: bool = b.pos.x <= lo.x or b.pos.x >= hi.x
+		var hit_y: bool = b.pos.y <= lo.y or b.pos.y >= hi.y
 		if hit_x or hit_y:
-			b.pos.x = clampf(b.pos.x, lo.x, hi.x)
-			b.pos.y = clampf(b.pos.y, lo.y, hi.y)
+			b.pos.x = clamp(b.pos.x, lo.x, hi.x)
+			b.pos.y = clamp(b.pos.y, lo.y, hi.y)
 			if b.bounces >= BULLET_MAX_BOUNCES:
 				b.dead = true
 				continue
@@ -219,7 +219,7 @@ func _update_bullets(delta: float) -> void:
 				b.vel.x *= -1.0
 			if hit_y:
 				b.vel.y *= -1.0
-			Sfx.play("move", randf_range(1.3, 1.6))
+			Sfx.play("move", rand_range(1.3, 1.6))
 			_burst(b.pos, Color("9fb4c6"), 3)
 			continue
 		# Bloques.
@@ -235,7 +235,7 @@ func _update_bullets(delta: float) -> void:
 			b.bounces += 1
 			b.vel = b.vel.bounce(nr)
 			b.pos += nr * (BULLET_RADIUS + 2.0)
-			Sfx.play("move", randf_range(1.3, 1.6))
+			Sfx.play("move", rand_range(1.3, 1.6))
 			_burst(b.pos, Color("9fb4c6"), 3)
 			break
 		if bounced:
@@ -251,7 +251,7 @@ func _update_bullets(delta: float) -> void:
 				# Las propias no hacen nada hasta el primer rebote.
 				if b.bounces == 0:
 					continue
-				set_score(t.player, maxi(0, get_score(t.player) - 1))
+				set_score(t.player, max(0, get_score(t.player) - 1))
 				_explode(t)
 			elif t.invuln <= 0.0:
 				add_score(b.owner_tank.player)
@@ -268,10 +268,14 @@ func _update_bullets(delta: float) -> void:
 				_burst(tg[0], Color("ffd34d"), 16)
 				tg[0] = _random_target_pos()
 				tg[1] = Vector2.RIGHT.rotated(randf() * TAU) * TARGET_SPEED
-				Sfx.play("star", randf_range(0.95, 1.1))
+				Sfx.play("star", rand_range(0.95, 1.1))
 				b.dead = true
 				break
-	_bullets = _bullets.filter(func(b: Bullet) -> bool: return not b.dead)
+	var live_bullets: Array = []
+	for b in _bullets:
+		if not b.dead:
+			live_bullets.append(b)
+	_bullets = live_bullets
 
 
 func _explode(t: Tank) -> void:
@@ -289,10 +293,10 @@ func _update_targets(delta: float) -> void:
 		var lo := ARENA.position + Vector2(TARGET_RADIUS, TARGET_RADIUS)
 		var hi := ARENA.end - Vector2(TARGET_RADIUS, TARGET_RADIUS)
 		if tg[0].x < lo.x or tg[0].x > hi.x:
-			tg[0].x = clampf(tg[0].x, lo.x, hi.x)
+			tg[0].x = clamp(tg[0].x, lo.x, hi.x)
 			tg[1].x *= -1.0
 		if tg[0].y < lo.y or tg[0].y > hi.y:
-			tg[0].y = clampf(tg[0].y, lo.y, hi.y)
+			tg[0].y = clamp(tg[0].y, lo.y, hi.y)
 			tg[1].y *= -1.0
 		for blk in _blocks:
 			var n := _circle_rect_normal(tg[0], TARGET_RADIUS, blk)
@@ -305,7 +309,7 @@ func _update_targets(delta: float) -> void:
 func _random_target_pos() -> Vector2:
 	var c := ARENA.get_center()
 	for i in 12:
-		var q := c + Vector2(randf_range(-460, 460), randf_range(-220, 220))
+		var q := c + Vector2(rand_range(-460, 460), rand_range(-220, 220))
 		var ok := true
 		for blk in _blocks:
 			if blk.grow(TARGET_RADIUS + 6.0).has_point(q):
@@ -320,8 +324,8 @@ func _random_target_pos() -> Vector2:
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(80.0, 360.0)
-		_confetti.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.4, 0.8)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(80.0, 360.0)
+		_confetti.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.4, 0.8)])
 
 
 func _update_effects(delta: float) -> void:
@@ -329,18 +333,22 @@ func _update_effects(delta: float) -> void:
 		c[0] += c[1] * delta
 		c[1] = c[1] * exp(-3.0 * delta) + Vector2(0, 400) * delta
 		c[3] -= delta
-	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
+	var live: Array = []
+	for c in _confetti:
+		if c[3] > 0.0:
+			live.append(c)
+	_confetti = live
 
 
 # --- Utilidades de colisión ---
 
 func _clamped_arena(pos: Vector2, r: float) -> Vector2:
-	return Vector2(clampf(pos.x, ARENA.position.x + r, ARENA.end.x - r),
-			clampf(pos.y, ARENA.position.y + r, ARENA.end.y - r))
+	return Vector2(clamp(pos.x, ARENA.position.x + r, ARENA.end.x - r),
+			clamp(pos.y, ARENA.position.y + r, ARENA.end.y - r))
 
 
 func _closest_point(p: Vector2, rect: Rect2) -> Vector2:
-	return Vector2(clampf(p.x, rect.position.x, rect.end.x), clampf(p.y, rect.position.y, rect.end.y))
+	return Vector2(clamp(p.x, rect.position.x, rect.end.x), clamp(p.y, rect.position.y, rect.end.y))
 
 
 ## Normal (hacia fuera) si el círculo toca el rectángulo; ZERO si no.
@@ -354,7 +362,7 @@ func _circle_rect_normal(center: Vector2, r: float, rect: Rect2) -> Vector2:
 	var dr := rect.end.x - center.x
 	var dt := center.y - rect.position.y
 	var db := rect.end.y - center.y
-	var m := minf(minf(dl, dr), minf(dt, db))
+	var m := min(min(dl, dr), min(dt, db))
 	if m == dl:
 		return Vector2.LEFT
 	if m == dr:
@@ -369,7 +377,7 @@ func _inside_depth(center: Vector2, rect: Rect2) -> float:
 	var dr := rect.end.x - center.x
 	var dt := center.y - rect.position.y
 	var db := rect.end.y - center.y
-	return minf(minf(dl, dr), minf(dt, db))
+	return min(min(dl, dr), min(dt, db))
 
 
 # --- Dibujo ---
@@ -426,7 +434,7 @@ func _draw() -> void:
 		draw_circle(b.pos, BULLET_RADIUS, b.owner_tank.player.color.lightened(0.15))
 		draw_circle(b.pos + Vector2(-1.5, -1.5), BULLET_RADIUS * 0.4, Color(1, 1, 1, 0.7))
 	for c in _confetti:
-		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clamp(c[3] * 2.0, 0.0, 1.0)))
 
 
 ## Polen flotando: tres motas baratas para dar vida al jardín.
@@ -449,7 +457,7 @@ func _draw_tank(t: Tank) -> void:
 		return
 	var blink := t.invuln > 0.0 and int(t.invuln * 10.0) % 2 == 0
 	if blink:
-		col = col.lerp(Color.WHITE, 0.65)
+		col = col.linear_interpolate(Color(1, 1, 1, 1), 0.65)
 	# Sombra difusa de tanque de juguete.
 	DrawKit.soft_shadow(self, t.pos + Vector2(0, 6), TANK_RADIUS * 2.0)
 	# Cañón detrás del cuerpo.
@@ -461,13 +469,13 @@ func _draw_tank(t: Tank) -> void:
 	draw_circle(t.pos, TANK_RADIUS, col)
 	draw_circle(t.pos + Vector2(0, TANK_RADIUS * 0.22), TANK_RADIUS * 0.8, col.darkened(0.08))
 	draw_circle(t.pos + Vector2(-TANK_RADIUS * 0.32, -TANK_RADIUS * 0.34), TANK_RADIUS * 0.36, Color(1, 1, 1, 0.45))
-	draw_text_centered(str(t.player.index + 1), t.pos, 24, Color.WHITE)
+	draw_text_centered(str(t.player.index + 1), t.pos, 24, Color(1, 1, 1, 1))
 
 
 func _draw_target(center: Vector2) -> void:
 	var pulse := 1.0 + sin(_time * 5.0) * 0.06
 	draw_circle(center + Vector2(0, 4), TARGET_RADIUS * pulse, WiiTheme.SHADOW)
 	draw_circle(center, TARGET_RADIUS * pulse, Color("ffd34d"))
-	draw_circle(center, TARGET_RADIUS * 0.68 * pulse, Color.WHITE)
+	draw_circle(center, TARGET_RADIUS * 0.68 * pulse, Color(1, 1, 1, 1))
 	draw_circle(center, TARGET_RADIUS * 0.38 * pulse, Color("e25555"))
-	draw_circle(center, TARGET_RADIUS * 0.14 * pulse, Color.WHITE)
+	draw_circle(center, TARGET_RADIUS * 0.14 * pulse, Color(1, 1, 1, 1))

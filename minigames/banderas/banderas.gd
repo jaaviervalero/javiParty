@@ -35,7 +35,7 @@ class Runner:
 	var player: Player = null
 	var ghost := false
 	var index := 0
-	var color := Color.WHITE
+	var color := Color(1, 1, 1, 1)
 	var lane_y := 0.0
 	var x := 0.0
 	var vx := 0.0
@@ -56,15 +56,15 @@ class Flag:
 
 
 var _solo := false
-var _runners: Array[Runner] = []
-var _round_runners: Array[Runner] = []
-var _eliminated_this_round: Array[Runner] = []
-var _flags: Array[Flag] = []
-var _sand_dots: Array[Vector2] = []
+var _runners: Array = []
+var _round_runners: Array = []
+var _eliminated_this_round: Array = []
+var _flags: Array = []
+var _sand_dots: Array = []
 var _confetti: Array = []   # [pos, vel, color, vida]
 var _dust: Array = []       # [pos, vel, vida]
 var _round_num := 1
-var _phase := Phase.PREP
+var _phase: int = Phase.PREP
 var _phase_t := 0.0
 var _prep_time := PREP_MIN
 var _signal_flash := 0.0
@@ -102,15 +102,15 @@ func _setup() -> void:
 	# Motas de arena, generadas una sola vez.
 	var inner := _inner()
 	for i in 70:
-		_sand_dots.append(Vector2(randf_range(inner.position.x + 24.0, inner.end.x - 24.0),
-				randf_range(SAND_TOP + 30.0, inner.end.y - 14.0)))
+		_sand_dots.append(Vector2(rand_range(inner.position.x + 24.0, inner.end.x - 24.0),
+				rand_range(SAND_TOP + 30.0, inner.end.y - 14.0)))
 	_begin_round()
 
 
 func _game_process(delta: float) -> void:
 	_time += delta
 	_phase_t += delta
-	_signal_flash = maxf(0.0, _signal_flash - delta / SIGNAL_FLASH_TIME)
+	_signal_flash = max(0.0, _signal_flash - delta / SIGNAL_FLASH_TIME)
 	match _phase:
 		Phase.PREP:
 			_process_prep()
@@ -135,7 +135,7 @@ func _game_end() -> void:
 func _begin_round() -> void:
 	_phase = Phase.PREP
 	_phase_t = 0.0
-	_prep_time = randf_range(PREP_MIN, PREP_MAX)
+	_prep_time = rand_range(PREP_MIN, PREP_MAX)
 	_signal_flash = 0.0
 	_celebrating = false
 	_solo_lost = false
@@ -147,7 +147,7 @@ func _begin_round() -> void:
 	var n := _round_runners.size()
 	for i in n:
 		var r: Runner = _round_runners[i]
-		r.lane_y = lerpf(RUN_TOP, RUN_BOTTOM, (float(i) + 0.5) / float(n))
+		r.lane_y = lerp(RUN_TOP, RUN_BOTTOM, (float(i) + 0.5) / float(n))
 		r.x = START_X
 		r.vx = 0.0
 		r.rise = 0.0
@@ -163,14 +163,14 @@ func _begin_round() -> void:
 func _spawn_flags() -> void:
 	_flags.clear()
 	var count := 1 if _solo else _round_runners.size() - 1
-	count = maxi(count, 1)
+	count = max(count, 1)
 	var top := SAND_TOP + 52.0
 	var bot := ARENA.end.y - 34.0
 	for i in count:
 		var f := Flag.new()
 		var t := (float(i) + 0.5) / float(count)
 		var dx: float = FLAG_DX[i % 3] if count > 1 else 0.0
-		f.base = Vector2(FLAG_X + dx, lerpf(top, bot, t))
+		f.base = Vector2(FLAG_X + dx, lerp(top, bot, t))
 		f.phase = randf() * TAU
 		_flags.append(f)
 
@@ -182,7 +182,7 @@ func _process_prep() -> void:
 		if r.player.just_pressed(Pad.A):
 			r.false_start = true
 			r.squash = 0.7
-			Sfx.play("back", randf_range(0.8, 0.95))
+			Sfx.play("back", rand_range(0.8, 0.95))
 	if _phase_t >= _prep_time:
 		_signal()
 
@@ -201,7 +201,7 @@ func _process_race(delta: float) -> void:
 		if r.has_flag:
 			continue
 		if r.ghost:
-			r.rise = minf(1.0, r.rise + delta / RISE_TIME)
+			r.rise = min(1.0, r.rise + delta / RISE_TIME)
 			if r.rise < 1.0:
 				continue
 			r.x += _ghost_speed() * delta
@@ -211,14 +211,14 @@ func _process_race(delta: float) -> void:
 				_try_grab(r)
 			continue
 		if r.penalty > 0.0:
-			r.penalty = maxf(0.0, r.penalty - delta)
+			r.penalty = max(0.0, r.penalty - delta)
 			continue
-		r.rise = minf(1.0, r.rise + delta / RISE_TIME)
+		r.rise = min(1.0, r.rise + delta / RISE_TIME)
 		if r.rise < 1.0:
 			continue
 		# Cada pulsación es un impulso; sin pulsar, la velocidad se apaga.
 		if r.player.just_pressed(Pad.A):
-			r.vx = minf(MAX_RUN_SPEED, r.vx + IMPULSE)
+			r.vx = min(MAX_RUN_SPEED, r.vx + IMPULSE)
 			r.squash = 1.18
 		r.vx *= exp(-RUN_DRAG * delta)
 		r.x += r.vx * delta
@@ -246,7 +246,7 @@ func _try_grab(r: Runner) -> void:
 	r.flag = f
 	r.vx = 0.0
 	r.squash = 1.3
-	Sfx.play("pop", randf_range(0.95, 1.15))
+	Sfx.play("pop", rand_range(0.95, 1.15))
 	_burst(f.base, r.color if not r.ghost else Color("c3ccd4"), 12)
 
 
@@ -299,7 +299,7 @@ func _end_round() -> void:
 		elif not r.ghost:
 			r.eliminated = true
 			_eliminated_this_round.append(r)
-			Sfx.play("leave", randf_range(0.9, 1.1))
+			Sfx.play("leave", rand_range(0.9, 1.1))
 
 	_phase = Phase.ROUND_END
 	_phase_t = 0.0
@@ -351,13 +351,13 @@ func _puff(r: Runner) -> void:
 	if _dust.size() >= 70:
 		return
 	_dust.append([Vector2(r.x - 12.0, r.lane_y - 2.0),
-			Vector2(randf_range(-50.0, -12.0), randf_range(-34.0, -8.0)), 0.35])
+			Vector2(rand_range(-50.0, -12.0), rand_range(-34.0, -8.0)), 0.35])
 
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(90.0, 320.0)
-		_confetti.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.45, 0.85)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(90.0, 320.0)
+		_confetti.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.45, 0.85)])
 
 
 func _update_effects(delta: float) -> void:
@@ -365,14 +365,22 @@ func _update_effects(delta: float) -> void:
 		c[0] += c[1] * delta
 		c[1] = c[1] * exp(-3.0 * delta) + Vector2(0, 500) * delta
 		c[3] -= delta
-	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
+	var live_confetti: Array = []
+	for c in _confetti:
+		if c[3] > 0.0:
+			live_confetti.append(c)
+	_confetti = live_confetti
 	for d in _dust:
 		d[0] += d[1] * delta
 		d[1] = d[1] * exp(-2.5 * delta) + Vector2(0, 60) * delta
 		d[2] -= delta
-	_dust = _dust.filter(func(d): return d[2] > 0.0)
+	var live_dust: Array = []
+	for d in _dust:
+		if d[2] > 0.0:
+			live_dust.append(d)
+	_dust = live_dust
 	for r in _round_runners:
-		r.squash = lerpf(r.squash, 1.0, minf(1.0, delta * 10.0))
+		r.squash = lerp(r.squash, 1.0, min(1.0, delta * 10.0))
 
 
 # =====================================================================
@@ -425,10 +433,10 @@ func _draw_beach() -> void:
 
 
 func _draw_waves(x0: float, x1: float, y: float, amp: float, speed: float, color: Color, width: float) -> void:
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	var n := 25
 	for k in n:
-		var x := lerpf(x0, x1, float(k) / float(n - 1))
+		var x: float = lerp(x0, x1, float(k) / float(n - 1))
 		pts.append(Vector2(x, y + sin(_time * speed + k * 0.55) * amp))
 	draw_polyline(pts, color, width, true)
 
@@ -442,14 +450,14 @@ func _draw_cloud(c: Vector2, s: float) -> void:
 
 func _draw_gull(c: Vector2, s: float) -> void:
 	var col := Color("8fa5b2")
-	draw_polyline(PackedVector2Array([c + Vector2(-10, 2) * s, c + Vector2(0, -3) * s,
+	draw_polyline(PoolVector2Array([c + Vector2(-10, 2) * s, c + Vector2(0, -3) * s,
 			c + Vector2(10, 2) * s]), col, 2.5, true)
 
 
 func _draw_start_line() -> void:
 	var y := SAND_TOP + 34.0
 	while y < 684.0:
-		draw_line(Vector2(START_X, y), Vector2(START_X, minf(y + 13.0, 684.0)),
+		draw_line(Vector2(START_X, y), Vector2(START_X, min(y + 13.0, 684.0)),
 				Color(1, 1, 1, 0.8), 4.0)
 		y += 21.0
 	draw_text_centered(loc({"es": "Salida", "en": "Start"}), Vector2(START_X, SAND_TOP + 18.0),
@@ -468,12 +476,12 @@ func _draw_flag(base: Vector2, col: Color, phase: float, alpha: float) -> void:
 		return
 	draw_set_transform(base + Vector2(0, 4), 0, Vector2(1.0, 0.3))
 	draw_circle(Vector2.ZERO, 12.0, Color(WiiTheme.SHADOW, 0.8 * alpha))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var top := base + Vector2(0, -POLE_H)
 	draw_line(base, top, Color(0.55, 0.6, 0.65, alpha), 4.0, true)
 	draw_circle(top, 4.5, Color(1.0, 0.83, 0.3, alpha))
 	var w := sin(phase) * 4.0
-	var pts := PackedVector2Array([
+	var pts := PoolVector2Array([
 		top + Vector2(2, 2),
 		top + Vector2(24.0 + w * 0.4, 8.0 + w),
 		top + Vector2(21.0 + w * 0.3, 20.0 + w * 0.7),
@@ -488,34 +496,34 @@ func _draw_runner(r: Runner) -> void:
 	if r.ghost:
 		col = Color("c3ccd4")
 	elif r.eliminated:
-		col = col.lerp(Color("c8ced4"), 0.8)
+		col = col.linear_interpolate(Color("c8ced4"), 0.8)
 	elif r.player != null and not r.player.is_connected_now():
-		col = col.lerp(Color("c8ced4"), 0.55)
+		col = col.linear_interpolate(Color("c8ced4"), 0.55)
 	var bob := 0.0
 	if r.rise > 0.85 and r.vx > 20.0:
-		bob = absf(sin(r.step)) * 4.0
+		bob = abs(sin(r.step)) * 4.0
 	var ease_rise := r.rise * r.rise * (3.0 - 2.0 * r.rise)
 	var lying := Vector2(r.x, r.lane_y - 8.0)
 	var standing := Vector2(r.x, r.lane_y - RUNNER_RADIUS - bob)
-	var c := lying.lerp(standing, ease_rise)
-	var sx := lerpf(1.35, 1.0, ease_rise) / r.squash
-	var sy := lerpf(0.5, 1.0, ease_rise) * r.squash
+	var c := lying.linear_interpolate(standing, ease_rise)
+	var sx: float = lerp(1.35, 1.0, ease_rise) / r.squash
+	var sy: float = lerp(0.5, 1.0, ease_rise) * r.squash
 	# Sombra.
 	draw_set_transform(Vector2(r.x, r.lane_y + 2.0), 0, Vector2(1.35, 0.32))
 	draw_circle(Vector2.ZERO, RUNNER_RADIUS, WiiTheme.SHADOW)
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# Cuerpo: bola aplastada tumbado, redonda de pie.
 	draw_set_transform(c, 0, Vector2(sx, sy))
 	draw_circle(Vector2.ZERO, RUNNER_RADIUS, col)
 	draw_circle(Vector2(0, RUNNER_RADIUS * 0.24), RUNNER_RADIUS * 0.76, col.darkened(0.08))
 	draw_circle(Vector2(-RUNNER_RADIUS * 0.3, -RUNNER_RADIUS * 0.34),
 			RUNNER_RADIUS * 0.34, Color(1, 1, 1, 0.42))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if r.ghost:
 		draw_circle(c + Vector2(-7, -4), 3.4, Color("6b7680"))
 		draw_circle(c + Vector2(7, -4), 3.4, Color("6b7680"))
 	else:
-		draw_text_centered(str(r.index + 1), c, 22, Color.WHITE if not r.eliminated else Color("eef1f3"))
+		draw_text_centered(str(r.index + 1), c, 22, Color(1, 1, 1, 1) if not r.eliminated else Color("eef1f3"))
 	# Bandera en la mano.
 	if r.has_flag and r.flag != null:
 		var hand := c + Vector2(RUNNER_RADIUS * 0.65, -RUNNER_RADIUS * 0.95)
@@ -539,7 +547,7 @@ func _draw_dust() -> void:
 
 func _draw_confetti() -> void:
 	for c in _confetti:
-		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)), Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)), Color(c[2], clamp(c[3] * 2.0, 0.0, 1.0)))
 
 
 func _draw_phase_text() -> void:
@@ -560,8 +568,8 @@ func _draw_phase_text() -> void:
 				var s := 1.0 + _signal_flash * 0.5
 				draw_set_transform(Vector2(640, inner.position.y + 112.0), 0, Vector2(s, s))
 				draw_text_centered(loc({"es": "¡YA!", "en": "GO!"}), Vector2.ZERO, 110,
-						Color(0.86, 0.62, 0.05, clampf(_signal_flash * 1.6, 0.0, 1.0)))
-				draw_set_transform(Vector2.ZERO)
+						Color(0.86, 0.62, 0.05, clamp(_signal_flash * 1.6, 0.0, 1.0)))
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		Phase.ROUND_END:
 			var center := Vector2(640, inner.position.y + 108.0)
 			if _solo:
@@ -578,7 +586,7 @@ func _draw_phase_text() -> void:
 						center, 52, _final_winner.color.darkened(0.15))
 				draw_text_centered(loc({"es": "Última bandera", "en": "Last flag"}),
 						center + Vector2(0, 44), 22, WiiTheme.TEXT_SOFT)
-			elif not _eliminated_this_round.is_empty():
+			elif not _eliminated_this_round.empty():
 				var e: Runner = _eliminated_this_round[0]
 				draw_text_centered(loc({"es": "Jugador %d sin bandera", "en": "Player %d missed out"}) % (e.index + 1),
 						center, 38, Color("e25555"))

@@ -38,8 +38,8 @@ class Duelist:
 	var reaction := -1.0
 
 
-var _duelists: Array[Duelist] = []
-var _phase := Phase.PREP
+var _duelists: Array = []
+var _phase: int = Phase.PREP
 var _phase_t := 0.0
 var _prep_time := PREP_MIN
 var _round := 1
@@ -61,7 +61,7 @@ func _configure() -> void:
 
 
 func _col_width() -> float:
-	return minf(ARENA.size.x / float(maxi(players.size(), 1)), MAX_COL_W)
+	return min(ARENA.size.x / float(max(players.size(), 1)), MAX_COL_W)
 
 
 func _col_left() -> float:
@@ -86,7 +86,7 @@ func _game_start() -> void:
 func _start_round() -> void:
 	_phase = Phase.PREP
 	_phase_t = 0.0
-	_prep_time = randf_range(PREP_MIN, PREP_MAX)
+	_prep_time = rand_range(PREP_MIN, PREP_MAX)
 	_signal_t = 0.0
 	_winner = null
 	_void = false
@@ -102,7 +102,7 @@ func _game_process(delta: float) -> void:
 	_time += delta
 	_phase_t += delta
 	for d in _duelists:
-		d.squash = lerpf(d.squash, 1.0, minf(1.0, delta * 8.0))
+		d.squash = lerp(d.squash, 1.0, min(1.0, delta * 8.0))
 
 	match _phase:
 		Phase.PREP:
@@ -129,7 +129,7 @@ func _process_prep() -> void:
 		if d.player.just_pressed(Pad.A):
 			d.out_this_round = true
 			d.squash = 0.65
-			Sfx.play("back", randf_range(0.9, 1.1))
+			Sfx.play("back", rand_range(0.9, 1.1))
 		else:
 			all_out = false
 	if all_out:
@@ -157,7 +157,7 @@ func _process_signal(delta: float) -> void:
 			if _winner == null:
 				_winner = d
 	if pressed:
-		Sfx.play("pop", randf_range(1.0, 1.2))
+		Sfx.play("pop", rand_range(1.0, 1.2))
 	if _winner != null:
 		_end_round()
 	elif _signal_t >= SIGNAL_TIMEOUT:
@@ -218,9 +218,9 @@ func _draw_scenery(ci: CanvasItem) -> void:
 
 ## Meseta de dibujos animados: base ancha y cima redondeada.
 func _draw_mesa(ci: CanvasItem, cx: float, base_y: float, w: float, h: float, color: Color,
-		clip: PackedVector2Array) -> void:
+		clip: PoolVector2Array) -> void:
 	var top := base_y - h
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	pts.append(Vector2(cx - w * 0.5, base_y))
 	pts.append(Vector2(cx - w * 0.34, top + h * 0.3))
 	for i in 13:
@@ -229,7 +229,7 @@ func _draw_mesa(ci: CanvasItem, cx: float, base_y: float, w: float, h: float, co
 	pts.append(Vector2(cx + w * 0.5, base_y))
 	DrawKit.clipped_polygon(ci, pts, clip, color)
 	# Cima más clara donde da el sol.
-	var lit := PackedVector2Array()
+	var lit := PoolVector2Array()
 	for i in 13:
 		var a := PI + PI * float(i) / 12.0
 		lit.append(Vector2(cx + cos(a) * w * 0.3, top + h * 0.24 + sin(a) * h * 0.22))
@@ -269,8 +269,8 @@ func _tumble_pos(phase: float, speed: float) -> Vector2:
 	var lo := ARENA.position.x + 26.0
 	var hi := ARENA.end.x - 26.0
 	var t := fmod(_time * speed / (hi - lo) + phase * 0.11, 1.0)
-	var x := lerpf(lo, hi, t)
-	var y := ARENA.end.y - 74.0 - absf(sin(_time * 2.4 + phase)) * 14.0
+	var x: float = lerp(lo, hi, t)
+	var y: float = ARENA.end.y - 74.0 - abs(sin(_time * 2.4 + phase)) * 14.0
 	return Vector2(x, y)
 
 
@@ -280,7 +280,7 @@ func _draw_tumbleweed(p: Vector2, r: float) -> void:
 	draw_arc(p, r * 0.62, spin, spin + TAU * 0.8, 12, TUMBLE, 1.8, true)
 	for i in 5:
 		var a := spin + TAU * float(i) / 5.0
-		draw_line(p + Vector2.from_angle(a) * r * 0.3, p + Vector2.from_angle(a) * r * 0.92,
+		draw_line(p + Vector2(cos(a), sin(a)) * r * 0.3, p + Vector2(cos(a), sin(a)) * r * 0.92,
 				TUMBLE, 1.8, true)
 
 
@@ -312,7 +312,7 @@ func _draw_prep() -> void:
 	draw_circle(SIGNAL_CENTER, SIGNAL_RADIUS * 0.78 * pulse, Color("eef3f7"))
 	draw_text_centered(loc({"es": "Preparados...", "en": "Ready..."}), SIGNAL_CENTER, 54, WiiTheme.TEXT)
 	for i in 3:
-		var a := 0.3 + 0.7 * maxf(0.0, sin(_time * 3.2 - i * 0.7))
+		var a: float = 0.3 + 0.7 * max(0.0, sin(_time * 3.2 - i * 0.7))
 		draw_circle(SIGNAL_CENTER + Vector2(-40 + i * 40, 70), 10, Color(WiiTheme.ACCENT, a))
 
 
@@ -343,7 +343,7 @@ func _draw_duelist(d: Duelist) -> void:
 	var p := d.player
 	var col := p.color
 	if d.out_this_round or not p.is_connected_now():
-		col = col.lerp(Color("c8ced4"), 0.7)
+		col = col.linear_interpolate(Color("c8ced4"), 0.7)
 	var stretch := Vector2(1.0 / d.squash, d.squash)
 	draw_set_transform(d.pos + Vector2(0, 8), 0, Vector2(stretch.x * 1.05, 0.35))
 	draw_circle(Vector2.ZERO, BALL_RADIUS, WiiTheme.SHADOW)
@@ -351,8 +351,8 @@ func _draw_duelist(d: Duelist) -> void:
 	draw_circle(Vector2.ZERO, BALL_RADIUS, col)
 	draw_circle(Vector2(0, BALL_RADIUS * 0.25), BALL_RADIUS * 0.75, col.darkened(0.08))
 	draw_circle(Vector2(-BALL_RADIUS * 0.3, -BALL_RADIUS * 0.35), BALL_RADIUS * 0.38, Color(1, 1, 1, 0.4))
-	draw_set_transform(Vector2.ZERO)
-	draw_text_centered(str(p.index + 1), d.pos, 34, Color.WHITE)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_text_centered(str(p.index + 1), d.pos, 34, Color(1, 1, 1, 1))
 
 	var status := ""
 	var scol := WiiTheme.TEXT_SOFT

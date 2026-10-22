@@ -12,7 +12,7 @@ extends Node
 ##
 ## Solo debe estar activo en pantallas de lobby/conexión; en partida, stop().
 
-signal server_found(ip: String, port: int)
+signal server_found(ip, port)
 
 const INTERVAL_SEC := 3.0
 ## Tras este tiempo escaneando sin ningún mando, la UI muestra consejos.
@@ -20,13 +20,13 @@ const WARN_AFTER_SEC := 12.0
 const THREAD_TICK_MSEC := 15
 
 var active := false
-var subnets := PackedStringArray()  # prefijos tipo "192.168.1."
+var subnets := PoolStringArray()  # prefijos tipo "192.168.1."
 var sweeps := 0
 
 var _thread: Thread
 var _mutex := Mutex.new()
 var _running := false          # protegido por _mutex
-var _pending_subnets := PackedStringArray()  # para el hilo, protegido por _mutex
+var _pending_subnets := PoolStringArray()  # para el hilo, protegido por _mutex
 var _sweep_requested := false  # protegido por _mutex
 var _found: Array = []         # [[ip, port], ...] del hilo al principal, protegido por _mutex
 var _timer := 0.0
@@ -34,7 +34,7 @@ var _active_time := 0.0
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_mode = Node.PAUSE_MODE_PROCESS
 
 
 func start() -> void:
@@ -45,7 +45,7 @@ func start() -> void:
 	_timer = INTERVAL_SEC  # primer barrido inmediato
 	_running = true
 	_thread = Thread.new()
-	_thread.start(_thread_main.bind(DSUClient.client_id))
+	_thread.start(self, "_thread_main", DSUClient.client_id)
 
 
 func stop() -> void:
@@ -65,7 +65,7 @@ func _exit_tree() -> void:
 
 ## true si llevamos un rato escaneando y no hay ningún mando enviando datos.
 func should_warn() -> bool:
-	return active and _active_time > WARN_AFTER_SEC and DSUClient.connected_controllers().is_empty()
+	return active and _active_time > WARN_AFTER_SEC and DSUClient.connected_controllers().empty()
 
 
 func _process(delta: float) -> void:
@@ -89,14 +89,14 @@ func _process(delta: float) -> void:
 	for f in found:
 		if not DSUClient.has_server(f[0], f[1]):
 			DSUClient.add_server(f[0], f[1])
-			server_found.emit(f[0], f[1])
+			emit_signal("server_found", f[0], f[1])
 
 
 # --- Hilo de escaneo: solo usa su socket y las variables protegidas ---
 
 func _thread_main(client_id: int) -> void:
 	var sock := PacketPeerUDP.new()
-	if sock.bind(0, "0.0.0.0") != OK:
+	if sock.listen(0, "0.0.0.0") != OK:
 		push_error("NetworkScanner: no se pudo abrir el socket de escaneo")
 		return
 	sock.set_broadcast_enabled(true)
@@ -120,7 +120,7 @@ func _thread_main(client_id: int) -> void:
 	sock.close()
 
 
-func _send(sock: PacketPeerUDP, ip: String, pkt: PackedByteArray) -> void:
+func _send(sock: PacketPeerUDP, ip: String, pkt: PoolByteArray) -> void:
 	sock.set_dest_address(ip, DSUProtocol.PORT)
 	sock.put_packet(pkt)  # puede bloquear un rato; por eso estamos en un hilo
 

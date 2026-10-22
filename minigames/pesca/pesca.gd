@@ -65,8 +65,8 @@ class Fish:
 	var escape_t := 0.0
 
 
-var _fishers: Array[Fisher] = []
-var _fish: Array[Fish] = []
+var _fishers: Array = []
+var _fish: Array = []
 var _confetti: Array = []
 var _time := 0.0
 
@@ -87,7 +87,7 @@ func _setup() -> void:
 	var n := players.size()
 	var usable := ARENA.size.x - COL_MARGIN * 2.0
 	for i in n:
-		var p := players[i]
+		var p: Player = players[i]
 		var f := Fisher.new()
 		f.player = p
 		f.x = ARENA.position.x + COL_MARGIN + usable * (float(i) + 0.5) / float(n)
@@ -102,14 +102,14 @@ func _make_fish(kind: int, anywhere: bool) -> Fish:
 	var f := Fish.new()
 	f.kind = kind
 	f.r = RADII[kind]
-	f.speed = SPEEDS[kind] * randf_range(0.85, 1.15)
+	f.speed = SPEEDS[kind] * rand_range(0.85, 1.15)
 	f.base_speed = f.speed
 	f.dir = -1.0 if randf() < 0.5 else 1.0
 	var lo_y := WATER_TOP + 50.0
 	var hi_y := ARENA.end.y - 46.0
-	f.pos.y = randf_range(lo_y, hi_y)
+	f.pos.y = rand_range(lo_y, hi_y)
 	if anywhere:
-		f.pos.x = randf_range(ARENA.position.x + 40.0, ARENA.end.x - 40.0)
+		f.pos.x = rand_range(ARENA.position.x + 40.0, ARENA.end.x - 40.0)
 	else:
 		f.pos.x = ARENA.end.x + 70.0 if f.dir < 0.0 else ARENA.position.x - 70.0
 	return f
@@ -128,8 +128,8 @@ func _game_process(delta: float) -> void:
 # --- Pescadores ---
 
 func _update_fisher(f: Fisher, delta: float) -> void:
-	f.sfx_t = maxf(0.0, f.sfx_t - delta)
-	f.shake = maxf(0.0, f.shake - delta)
+	f.sfx_t = max(0.0, f.sfx_t - delta)
+	f.shake = max(0.0, f.shake - delta)
 	var p := f.player
 	if f.bite_fish != null:
 		# Minijuego de tensión: la aguja va y viene; A en la zona verde.
@@ -151,7 +151,7 @@ func _update_fisher(f: Fisher, delta: float) -> void:
 			f.zone_center = half + 0.04
 			f.zone_dir = 1.0
 		if p.just_pressed(Pad.A):
-			var ok := absf(f.needle - f.zone_center) <= f.zone_w * 0.5
+			var ok := abs(f.needle - f.zone_center) <= f.zone_w * 0.5
 			_end_bite(f, ok)
 		elif p.is_pressed(Pad.B) or f.bite_t <= 0.0:
 			_end_bite(f, false)
@@ -159,8 +159,8 @@ func _update_fisher(f: Fisher, delta: float) -> void:
 	var dir_y := 0.0
 	var stick := p.stick()
 	var digital := p.dpad()
-	if absf(stick.y) > 0.05:
-		dir_y = signf(stick.y)
+	if abs(stick.y) > 0.05:
+		dir_y = sign(stick.y)
 	elif digital.y != 0.0:
 		dir_y = digital.y
 	var speed := HOOK_SPEED
@@ -168,10 +168,10 @@ func _update_fisher(f: Fisher, delta: float) -> void:
 		dir_y = -1.0
 		speed = REEL_SPEED
 	if dir_y != 0.0:
-		f.hook_y = clampf(f.hook_y + dir_y * speed * delta, HOOK_MIN_Y, _hook_max_y())
+		f.hook_y = clamp(f.hook_y + dir_y * speed * delta, HOOK_MIN_Y, _hook_max_y())
 		if f.sfx_t <= 0.0:
 			f.sfx_t = 0.22
-			Sfx.play("move", randf_range(0.9, 1.05))
+			Sfx.play("move", rand_range(0.9, 1.05))
 
 
 func _hook_max_y() -> float:
@@ -199,12 +199,12 @@ func _start_bite(f: Fisher, fi: Fish) -> void:
 	f.needle = 0.0
 	f.needle_dir = 1.0
 	f.zone_w = ZONE_W[fi.kind]
-	f.zone_center = randf_range(f.zone_w * 0.5 + 0.06, 1.0 - f.zone_w * 0.5 - 0.06)
+	f.zone_center = rand_range(f.zone_w * 0.5 + 0.06, 1.0 - f.zone_w * 0.5 - 0.06)
 	f.zone_dir = -1.0 if randf() < 0.5 else 1.0
 	f.shake = 0.3
 	# El pez se queda enganchado junto al anzuelo.
-	fi.pos = Vector2(f.x, clampf(f.hook_y, WATER_TOP + 30.0, _hook_max_y()))
-	Sfx.play("pop", randf_range(0.85, 1.1))
+	fi.pos = Vector2(f.x, clamp(f.hook_y, WATER_TOP + 30.0, _hook_max_y()))
+	Sfx.play("pop", rand_range(0.85, 1.1))
 
 
 func _end_bite(f: Fisher, ok: bool) -> void:
@@ -222,14 +222,14 @@ func _end_bite(f: Fisher, ok: bool) -> void:
 		if fi.kind == 3:
 			Sfx.play("back", 0.7)
 		else:
-			Sfx.play("star", randf_range(0.95, 1.15))
+			Sfx.play("star", rand_range(0.95, 1.15))
 	else:
 		# Se escapa: se aleja nadando rápido y no vuelve a picar de momento.
 		fi.escape_t = ESCAPE_TIME
 		fi.dir = -fi.dir
 		fi.speed = fi.base_speed * 2.0
 		fi.bump = 0.0
-		Sfx.play("back", randf_range(0.8, 1.0))
+		Sfx.play("back", rand_range(0.8, 1.0))
 
 
 # --- Peces ---
@@ -237,14 +237,14 @@ func _end_bite(f: Fisher, ok: bool) -> void:
 func _update_fish(fi: Fish, delta: float) -> void:
 	fi.bump += delta * (10.0 + fi.speed * 0.05)
 	if fi.escape_t > 0.0:
-		fi.escape_t = maxf(0.0, fi.escape_t - delta)
+		fi.escape_t = max(0.0, fi.escape_t - delta)
 		if fi.escape_t <= 0.0:
 			fi.speed = fi.base_speed
 	if fi.caught_t > 0.0:
-		fi.caught_t = maxf(0.0, fi.caught_t - delta / CAUGHT_TIME)
+		fi.caught_t = max(0.0, fi.caught_t - delta / CAUGHT_TIME)
 		var f: Fisher = fi.owner_fisher
 		var top := Vector2(f.x, DOCK_Y + FISHER_RADIUS) if f != null else fi.caught_from
-		fi.pos = fi.caught_from.lerp(top, 1.0 - fi.caught_t)
+		fi.pos = fi.caught_from.linear_interpolate(top, 1.0 - fi.caught_t)
 		if fi.caught_t <= 0.0:
 			_respawn(fi)
 		return
@@ -272,8 +272,8 @@ func _respawn(fi: Fish) -> void:
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(80.0, 300.0)
-		_confetti.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.4, 0.8)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(80.0, 300.0)
+		_confetti.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.4, 0.8)])
 
 
 func _update_effects(delta: float) -> void:
@@ -281,7 +281,11 @@ func _update_effects(delta: float) -> void:
 		c[0] += c[1] * delta
 		c[1] = c[1] * exp(-3.0 * delta) + Vector2(0, 380) * delta
 		c[3] -= delta
-	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
+	var live_confetti: Array = []
+	for c in _confetti:
+		if c[3] > 0.0:
+			live_confetti.append(c)
+	_confetti = live_confetti
 
 
 # --- Dibujo ---
@@ -299,7 +303,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.vgradient(ci, water, WATER_LIGHT, WATER_DEEP)
 	# Reflejos suaves bajo los postes y brillo del cielo.
 	for i in 7:
-		var rx := inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
+		var rx: float = inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
 		DrawKit.ellipse(ci, Vector2(rx, WATER_TOP + 34.0), Vector2(17.0, 4.0), Color(1, 1, 1, 0.32))
 	DrawKit.ellipse(ci, Vector2(inner.position.x + 300.0, WATER_TOP + 12.0), Vector2(190.0, 9.0),
 			Color(1, 1, 1, 0.18))
@@ -307,15 +311,15 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	ci.draw_rect(Rect2(inner.position.x, inner.position.y, inner.size.x,
 			WATER_TOP - inner.position.y), Color("e6d3b3"))
 	for i in 6:
-		var ly := inner.position.y + 10.0 + i * 18.0
+		var ly: float = inner.position.y + 10.0 + i * 18.0
 		ci.draw_line(Vector2(inner.position.x, ly), Vector2(inner.end.x, ly), Color("cdb894"), 3.0)
 	# Postes del muelle sobre el agua.
 	for i in 7:
-		var px := inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
+		var px: float = inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 6.0
 		ci.draw_line(Vector2(px, WATER_TOP - 14.0), Vector2(px, WATER_TOP + 16.0),
 				Color("a8885f"), 8.0)
 	# Orilla de arena a la izquierda.
-	var bank := PackedVector2Array([
+	var bank := PoolVector2Array([
 		Vector2(inner.position.x, WATER_TOP - 4.0),
 		Vector2(inner.position.x + 168.0, WATER_TOP + 8.0),
 		Vector2(inner.position.x + 118.0, WATER_TOP + 74.0),
@@ -337,9 +341,9 @@ func _draw_scenery(ci: CanvasItem) -> void:
 
 
 ## Juncos: tallos verdes con espiga en la punta.
-func _draw_reeds(ci: CanvasItem, base: Vector2, count: int, seed: int) -> void:
+func _draw_reeds(ci: CanvasItem, base: Vector2, count: int, seed_value: int) -> void:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed
+	rng.seed = seed_value
 	for i in count:
 		var bx := base.x + rng.randf_range(-26.0, 26.0)
 		var h := rng.randf_range(54.0, 92.0)
@@ -359,7 +363,7 @@ func _draw() -> void:
 	for f in _fishers:
 		_draw_fisher(f)
 	for c in _confetti:
-		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+		draw_rect(Rect2(c[0] - Vector2(3, 3), Vector2(6, 6)), Color(c[2], clamp(c[3] * 2.0, 0.0, 1.0)))
 
 
 ## Dos bandas de olas animadas (baratas: solo la franja alta del agua).
@@ -388,7 +392,7 @@ func _draw_fisher(f: Fisher) -> void:
 	draw_circle(base, FISHER_RADIUS, col)
 	draw_circle(base + Vector2(-FISHER_RADIUS * 0.3, -FISHER_RADIUS * 0.32),
 			FISHER_RADIUS * 0.34, Color(1, 1, 1, 0.45))
-	draw_text_centered(str(p.index + 1), base, 20, Color.WHITE)
+	draw_text_centered(str(p.index + 1), base, 20, Color(1, 1, 1, 1))
 	if f.bite_fish != null:
 		_draw_tension(f, hook)
 
@@ -409,14 +413,14 @@ func _draw_tension(f: Fisher, hook: Vector2) -> void:
 	draw_rect(Rect2(nx - 3.0, y - 4.0, 6.0, 28.0), f.player.color.darkened(0.15))
 	draw_text_centered("A", Vector2(f.x, y - 22.0), 24, f.player.color.darkened(0.1))
 	# Cuenta atrás de la picada.
-	draw_arc(hook, 26.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(f.bite_t / BITE_TIME, 0.0, 1.0),
+	draw_arc(hook, 26.0, -PI / 2.0, -PI / 2.0 + TAU * clamp(f.bite_t / BITE_TIME, 0.0, 1.0),
 			28, Color(f.player.color, 0.55), 4.0, true)
 
 
 func _draw_fish(fi: Fish) -> void:
 	var alpha := 1.0
 	if fi.caught_t > 0.0:
-		alpha = clampf(fi.caught_t * 1.6, 0.0, 1.0)
+		alpha = clamp(fi.caught_t * 1.6, 0.0, 1.0)
 	if fi.kind == 3:
 		_draw_boot(fi.pos, fi.dir, alpha)
 		return
@@ -424,15 +428,15 @@ func _draw_fish(fi: Fish) -> void:
 	var rx := fi.r * 1.25
 	var ry := fi.r * 0.62
 	var wiggle := sin(fi.bump) * 0.18
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	for i in 16:
-		var a := TAU * i / 16.0
+		var a: float = TAU * i / 16.0
 		pts.append(fi.pos + Vector2(cos(a) * rx * fi.dir, sin(a) * ry))
 	draw_colored_polygon(pts, Color(col, alpha))
 	# Cola triangular a contralto del morro.
 	var tail_x := fi.pos.x - fi.dir * rx * 0.92
 	var tw := fi.r * 0.6
-	var tail := PackedVector2Array([
+	var tail := PoolVector2Array([
 		Vector2(tail_x, fi.pos.y),
 		Vector2(tail_x - fi.dir * fi.r * 0.7, fi.pos.y - tw + wiggle * fi.r * 0.4),
 		Vector2(tail_x - fi.dir * fi.r * 0.7, fi.pos.y + tw + wiggle * fi.r * 0.4),
@@ -447,14 +451,14 @@ func _draw_fish(fi: Fish) -> void:
 	# Vale X puntos: rayas para que se distinga el tamaño de un vistazo.
 	var stripes := fi.kind + 1
 	for i in stripes:
-		var sx := fi.pos.x - fi.dir * (fi.r * 0.3 - i * fi.r * 0.28)
+		var sx: float = fi.pos.x - fi.dir * (fi.r * 0.3 - i * fi.r * 0.28)
 		draw_line(Vector2(sx, fi.pos.y - ry * 0.45), Vector2(sx, fi.pos.y + ry * 0.45),
 				Color(1, 1, 1, 0.35 * alpha), 3.0)
 
 
 func _draw_boot(pos: Vector2, dir: float, alpha: float) -> void:
 	var col := Color(KIND_COLORS[3], alpha)
-	var pts := PackedVector2Array([
+	var pts := PoolVector2Array([
 		pos + Vector2(-10 * dir, -16),
 		pos + Vector2(4 * dir, -16),
 		pos + Vector2(6 * dir, 2),

@@ -66,15 +66,15 @@ class Shot:
 	var pos := Vector2.ZERO
 	var vel := Vector2.ZERO
 	var radius := 11.0
-	var trail: Array[Vector2] = []
+	var trail: Array = []
 	## null = bola de la arena; si no, el proyectil es de ese jugador.
 	var owner: Dodger = null
 	var alive := true
 
 
-var _dodgers: Array[Dodger] = []
-var _shots: Array[Shot] = []
-var _sweeps: Array[Sweep] = []
+var _dodgers: Array = []
+var _shots: Array = []
+var _sweeps: Array = []
 var _popups: Array = []   # [pos, t, color]: "+1" al ganar una vida
 var _flashes: Array = []  # [pos, t, color]: destello de la vida ganada
 var _shot_timer := 1.0
@@ -116,11 +116,11 @@ func _setup() -> void:
 		if n == 1:
 			d.pos = center
 		else:
-			var ang := -PI * 0.5 + TAU * i / n
+			var ang: float = -PI * 0.5 + TAU * i / n
 			d.pos = center + Vector2(cos(ang) * 270.0, sin(ang) * 150.0)
-		d.pos.x = clampf(d.pos.x, ARENA.position.x + BALL_RADIUS + 8,
+		d.pos.x = clamp(d.pos.x, ARENA.position.x + BALL_RADIUS + 8,
 				ARENA.end.x - BALL_RADIUS - 8)
-		d.pos.y = clampf(d.pos.y, ARENA.position.y + BALL_RADIUS + 8,
+		d.pos.y = clamp(d.pos.y, ARENA.position.y + BALL_RADIUS + 8,
 				ARENA.end.y - BALL_RADIUS - 8)
 		_dodgers.append(d)
 
@@ -138,7 +138,7 @@ func _game_process(delta: float) -> void:
 	_shot_timer -= delta
 	if _shot_timer <= 0.0:
 		_spawn_shot()
-		_shot_timer = maxf(SHOT_INTERVAL_END,
+		_shot_timer = max(SHOT_INTERVAL_END,
 				SHOT_INTERVAL_START - elapsed * SHOT_INTERVAL_GAIN)
 
 	if elapsed >= _next_sweep:
@@ -153,7 +153,7 @@ func _game_process(delta: float) -> void:
 	for d in _dodgers:
 		_collide_dodger(d)
 
-	var keep_shots: Array[Shot] = []
+	var keep_shots: Array = []
 	for s in _shots:
 		if s.alive:
 			keep_shots.append(s)
@@ -176,30 +176,30 @@ func _game_end() -> void:
 
 
 func _update_dodger(d: Dodger, delta: float) -> void:
-	d.squash = lerpf(d.squash, 1.0, minf(1.0, delta * 10.0))
+	d.squash = lerp(d.squash, 1.0, min(1.0, delta * 10.0))
 	if d.eliminated:
 		return
-	d.invuln = maxf(0.0, d.invuln - delta)
-	d.shield = maxf(0.0, d.shield - delta)
-	d.shield_cd = maxf(0.0, d.shield_cd - delta)
+	d.invuln = max(0.0, d.invuln - delta)
+	d.shield = max(0.0, d.shield - delta)
+	d.shield_cd = max(0.0, d.shield_cd - delta)
 
 	var p := d.player
 	if p.just_pressed(Pad.A) and d.shield_cd <= 0.0:
 		d.shield = SHIELD_TIME
 		d.shield_cd = SHIELD_COOLDOWN
 		d.squash = 1.25
-		Sfx.play("dash", randf_range(1.0, 1.2))
+		Sfx.play("dash", rand_range(1.0, 1.2))
 
 	var dir := p.stick() if p.stick() != Vector2.ZERO else p.dpad().normalized()
 	if dir.length() > 1.0:
 		dir = dir.normalized()
-	d.vel = d.vel.lerp(dir * MOVE_SPEED, 1.0 - exp(-RESPONSE * delta))
+	d.vel = d.vel.linear_interpolate(dir * MOVE_SPEED, 1.0 - exp(-RESPONSE * delta))
 	if dir == Vector2.ZERO:
 		d.vel *= exp(-RESPONSE * 1.2 * delta)
 	d.pos += d.vel * delta
-	d.pos.x = clampf(d.pos.x, ARENA.position.x + BALL_RADIUS + 6,
+	d.pos.x = clamp(d.pos.x, ARENA.position.x + BALL_RADIUS + 6,
 			ARENA.end.x - BALL_RADIUS - 6)
-	d.pos.y = clampf(d.pos.y, ARENA.position.y + BALL_RADIUS + 6,
+	d.pos.y = clamp(d.pos.y, ARENA.position.y + BALL_RADIUS + 6,
 			ARENA.end.y - BALL_RADIUS - 6)
 
 
@@ -208,23 +208,23 @@ func _spawn_shot() -> void:
 	var pos := Vector2.ZERO
 	match side:
 		0:
-			pos = Vector2(ARENA.position.x - 12, randf_range(ARENA.position.y, ARENA.end.y))
+			pos = Vector2(ARENA.position.x - 12, rand_range(ARENA.position.y, ARENA.end.y))
 		1:
-			pos = Vector2(ARENA.end.x + 12, randf_range(ARENA.position.y, ARENA.end.y))
+			pos = Vector2(ARENA.end.x + 12, rand_range(ARENA.position.y, ARENA.end.y))
 		2:
-			pos = Vector2(randf_range(ARENA.position.x, ARENA.end.x), ARENA.position.y - 12)
+			pos = Vector2(rand_range(ARENA.position.x, ARENA.end.x), ARENA.position.y - 12)
 		_:
-			pos = Vector2(randf_range(ARENA.position.x, ARENA.end.x), ARENA.end.y + 12)
+			pos = Vector2(rand_range(ARENA.position.x, ARENA.end.x), ARENA.end.y + 12)
 
-	var target := Vector2(randf_range(ARENA.position.x + 60, ARENA.end.x - 60),
-			randf_range(ARENA.position.y + 60, ARENA.end.y - 60))
-	if elapsed > AIM_MIN_TIME and randf() < minf(0.45, AIM_CHANCE + (elapsed - AIM_MIN_TIME) * 0.004):
+	var target := Vector2(rand_range(ARENA.position.x + 60, ARENA.end.x - 60),
+			rand_range(ARENA.position.y + 60, ARENA.end.y - 60))
+	if elapsed > AIM_MIN_TIME and randf() < min(0.45, AIM_CHANCE + (elapsed - AIM_MIN_TIME) * 0.004):
 		var nearest: Dodger = null
 		var best := INF
 		for d in _dodgers:
 			if d.eliminated:
 				continue
-			var dist := d.pos.distance_squared_to(pos)
+			var dist: float = d.pos.distance_squared_to(pos)
 			if dist < best:
 				best = dist
 				nearest = d
@@ -234,10 +234,10 @@ func _spawn_shot() -> void:
 	var shot := Shot.new()
 	shot.pos = pos
 	shot.radius = SHOT_RADIUS
-	var speed := SHOT_SPEED_START + minf(elapsed, 60.0) * SHOT_SPEED_GAIN
+	var speed := SHOT_SPEED_START + min(elapsed, 60.0) * SHOT_SPEED_GAIN
 	shot.vel = (target - pos).normalized() * speed
 	_shots.append(shot)
-	Sfx.play("pop", randf_range(0.7, 0.88))
+	Sfx.play("pop", rand_range(0.7, 0.88))
 
 
 func _update_shots(delta: float) -> void:
@@ -260,20 +260,20 @@ func _spawn_sweep() -> void:
 		var from_left := randf() < 0.5
 		sweep.dir = 1 if from_left else -1
 		sweep.pos = ARENA.position.x - 20.0 if from_left else ARENA.end.x + 20.0
-		sweep.gap_center = randf_range(ARENA.position.y + SWEEP_GAP * 0.5 + 30.0,
+		sweep.gap_center = rand_range(ARENA.position.y + SWEEP_GAP * 0.5 + 30.0,
 				ARENA.end.y - SWEEP_GAP * 0.5 - 30.0)
 	else:
 		var from_top := randf() < 0.5
 		sweep.dir = 1 if from_top else -1
 		sweep.pos = ARENA.position.y - 20.0 if from_top else ARENA.end.y + 20.0
-		sweep.gap_center = randf_range(ARENA.position.x + SWEEP_GAP * 0.5 + 30.0,
+		sweep.gap_center = rand_range(ARENA.position.x + SWEEP_GAP * 0.5 + 30.0,
 				ARENA.end.x - SWEEP_GAP * 0.5 - 30.0)
 	_sweeps.append(sweep)
 	Sfx.play("wave")
 
 
 func _update_sweeps(delta: float) -> void:
-	var keep: Array[Sweep] = []
+	var keep: Array = []
 	for sweep in _sweeps:
 		sweep.pos += sweep.dir * SWEEP_SPEED * delta
 		var gone := false
@@ -319,10 +319,10 @@ func _capture_shot(d: Dodger, s: Shot) -> void:
 	dir = dir.normalized()
 	s.owner = d
 	s.pos = d.pos + dir * (BALL_RADIUS + s.radius + 2.0)
-	var speed := clampf(s.vel.length() * BOUNCE_SPEEDUP, BOUNCE_MIN_SPEED, BOUNCE_MAX_SPEED)
+	var speed := clamp(s.vel.length() * BOUNCE_SPEEDUP, BOUNCE_MIN_SPEED, BOUNCE_MAX_SPEED)
 	s.vel = dir * speed
 	s.trail.clear()
-	Sfx.play("pop", randf_range(1.1, 1.3))
+	Sfx.play("pop", rand_range(1.1, 1.3))
 
 
 func _award_life(owner: Dodger) -> void:
@@ -339,20 +339,27 @@ func _award_life(owner: Dodger) -> void:
 func _update_effects(delta: float) -> void:
 	for popup in _popups:
 		popup[1] += delta
-	_popups = _popups.filter(func(popup): return popup[1] < POPUP_TIME)
+	var live_popups: Array = []
+	for popup in _popups:
+		if popup[1] < POPUP_TIME:
+			live_popups.append(popup)
+	_popups = live_popups
+	var live_flashes: Array = []
 	for flash in _flashes:
 		flash[1] += delta
-	_flashes = _flashes.filter(func(flash): return flash[1] < FLASH_TIME)
+		if flash[1] < FLASH_TIME:
+			live_flashes.append(flash)
+	_flashes = live_flashes
 
 
 func _sweep_hits(d: Dodger, sweep: Sweep) -> bool:
 	var half_gap := SWEEP_GAP * 0.5
 	if sweep.vertical:
-		if absf(d.pos.x - sweep.pos) > SWEEP_HALF + BALL_RADIUS:
+		if abs(d.pos.x - sweep.pos) > SWEEP_HALF + BALL_RADIUS:
 			return false
 		return d.pos.y < sweep.gap_center - half_gap + BALL_RADIUS \
 				or d.pos.y > sweep.gap_center + half_gap - BALL_RADIUS
-	if absf(d.pos.y - sweep.pos) > SWEEP_HALF + BALL_RADIUS:
+	if abs(d.pos.y - sweep.pos) > SWEEP_HALF + BALL_RADIUS:
 		return false
 	return d.pos.x < sweep.gap_center - half_gap + BALL_RADIUS \
 			or d.pos.x > sweep.gap_center + half_gap - BALL_RADIUS
@@ -363,7 +370,7 @@ func _hit_dodger(d: Dodger) -> void:
 		return
 	d.lives -= 1
 	d.invuln = INVULN_TIME
-	Sfx.play("back", randf_range(0.9, 1.08))
+	Sfx.play("back", rand_range(0.9, 1.08))
 	if d.lives <= 0:
 		d.eliminated = true
 		d.shield = 0.0
@@ -382,7 +389,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	var top := ARENA.position.y
 	var i := 0
 	while top < ARENA.end.y:
-		var h := minf(band, ARENA.end.y - top)
+		var h := min(band, ARENA.end.y - top)
 		if i % 2 == 0:
 			ci.draw_rect(Rect2(ARENA.position.x, top, ARENA.size.x, h),
 					Color(WOOD_LIGHT.lightened(0.12), 0.6))
@@ -402,16 +409,16 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	ci.draw_arc(mid, 74.0, 0.0, TAU, 40, COURT_LINE, 4.0, true)
 	# Pared acolchada en el borde superior.
 	var wall_h := 30.0
-	var wall := PackedVector2Array([
+	var wall := PoolVector2Array([
 		ARENA.position, Vector2(ARENA.end.x, ARENA.position.y),
 		Vector2(ARENA.end.x, ARENA.position.y + wall_h),
 		Vector2(ARENA.position.x, ARENA.position.y + wall_h),
 	])
 	DrawKit.clipped_polygon(ci, wall, clip, WALL_COLOR)
 	ci.draw_line(Vector2(ARENA.position.x + 34, ARENA.position.y + wall_h),
-			Vector2(ARENA.end.x - 34, ARENA.position.y + wall_h), Color.WHITE, 3.0)
+			Vector2(ARENA.end.x - 34, ARENA.position.y + wall_h), Color(1, 1, 1, 1), 3.0)
 	for k in 16:
-		var x := ARENA.position.x + 50.0 + k * 74.0
+		var x: float = ARENA.position.x + 50.0 + k * 74.0
 		ci.draw_line(Vector2(x, ARENA.position.y + 5.0),
 				Vector2(x, ARENA.position.y + wall_h - 5.0), Color(WALL_DARK, 0.6), 2.0)
 	DrawKit.arena_border(ci, ARENA)
@@ -433,7 +440,7 @@ func _draw() -> void:
 func _draw_shot(s: Shot) -> void:
 	var col := SHOT_COLOR if s.owner == null else s.owner.player.color
 	if s.trail.size() >= 2:
-		var pts := PackedVector2Array()
+		var pts := PoolVector2Array()
 		for point in s.trail:
 			pts.append(point)
 		draw_polyline(pts, Color(col, 0.22), s.radius * 1.3, true)
@@ -503,7 +510,7 @@ func _draw_dodger(d: Dodger) -> void:
 	draw_circle(Vector2.ZERO, BALL_RADIUS, Color(col, alpha))
 	draw_circle(Vector2(-BALL_RADIUS * 0.3, -BALL_RADIUS * 0.35), BALL_RADIUS * 0.4,
 			Color(1, 1, 1, 0.4 * alpha))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_text_centered(str(d.player.index + 1), d.pos, 22, Color(1, 1, 1, alpha))
 
 	if d.shield > 0.0:
@@ -514,8 +521,8 @@ func _draw_dodger(d: Dodger) -> void:
 		draw_arc(d.pos, BALL_RADIUS + 9.0, -PI * 0.5, -PI * 0.5 + TAU * ready, 24,
 				Color(WiiTheme.ACCENT, 0.35), 3.0, true)
 
-	var hearts_y := maxf(d.pos.y - BALL_RADIUS - 20.0, ARENA.position.y + 12.0)
-	var pips := maxi(LIVES, d.lives)  # se dibujan tantas como vidas tenga, hasta 5
+	var hearts_y := max(d.pos.y - BALL_RADIUS - 20.0, ARENA.position.y + 12.0)
+	var pips := max(LIVES, d.lives)  # se dibujan tantas como vidas tenga, hasta 5
 	var start_x := d.pos.x - (pips - 1) * 7.0
 	for i in pips:
 		var pip := d.player.color if i < d.lives else Color("d7dee4")

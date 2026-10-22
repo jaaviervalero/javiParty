@@ -5,23 +5,19 @@ const PATH := "user://settings.cfg"
 
 var locale := ""                       # "" = idioma del sistema
 var debug_overlay := false
-var manual_servers := PackedStringArray()  # IPs añadidas a mano, se reconectan al arrancar
+var manual_servers := PoolStringArray()  # IPs añadidas a mano, se reconectan al arrancar
+
+## Lo activa el test automático de minijuegos (antes era un static var de MinigameBase).
+var headless_test := false
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_mode = Node.PAUSE_MODE_PROCESS
 	for t in Strings.build_translations():
 		TranslationServer.add_translation(t)
 	_load()
 	apply_locale()
 	_setup_input()
-	# El tema va DENTRO del tema por defecto de Godot: el de la ventana raíz solo se
-	# hereda si todos los padres son Control/Window, y los HUD cuelgan de CanvasLayer.
-	var theme := WiiTheme.build()
-	ThemeDB.get_default_theme().merge_with(theme)
-	ThemeDB.get_default_theme().default_font = theme.default_font
-	ThemeDB.get_default_theme().default_font_size = theme.default_font_size
-	get_tree().root.theme = theme
 
 
 ## Botón "atrás" del mando de la tele (Android): en vez de cerrar la app
@@ -71,11 +67,11 @@ func _add_action(action: String) -> void:
 		InputMap.add_action(action)
 
 
-func _add_key(action: String, keycode: Key) -> void:
+func _add_key(action: String, keycode: int) -> void:
 	_add_action(action)
 	var ev := InputEventKey.new()
-	ev.physical_keycode = keycode
-	ev.keycode = keycode
+	ev.scancode = keycode
+	ev.physical_scancode = keycode
 	InputMap.action_add_event(action, ev)
 
 
@@ -85,7 +81,7 @@ func _load() -> void:
 		return
 	locale = cfg.get_value("general", "locale", "")
 	debug_overlay = cfg.get_value("general", "debug_overlay", false)
-	manual_servers = cfg.get_value("network", "manual_servers", PackedStringArray())
+	manual_servers = cfg.get_value("network", "manual_servers", PoolStringArray())
 
 
 func save() -> void:

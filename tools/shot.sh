@@ -5,8 +5,7 @@
 # Requiere xorg-server-xvfb.
 set -eu
 cd "$(dirname "$0")/.."
-run() { timeout 120 xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --display-driver x11 \
-	--rendering-driver opengl3 "$@" 2>&1 | grep -E "SCRIPT ERROR|Parse Error|^ERROR" || true; }
+run() { timeout 120 xvfb-run -a -s "-screen 0 1280x720x24" godot3 --path . --video-driver GLES2 "$@" 2>&1 | grep -E "SCRIPT ERROR|Parse Error|^ERROR" || true; }
 if [ "${1:?uso: tools/shot.sh <id>|select}" = select ]; then
 	out="${2:-/tmp/javiparty_select.png}"
 	run tests/screenshot.tscn -- res://ui/minigame_select.tscn "$out"

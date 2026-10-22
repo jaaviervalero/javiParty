@@ -43,8 +43,8 @@ class Item:
 	var gone := false
 
 
-var _balls: Array[Ball] = []
-var _items: Array[Item] = []
+var _balls: Array = []
+var _items: Array = []
 var _spawn_timer := 0.7
 var _time := 0.0
 var _pops: Array = []     # [pos, texto, color, t]
@@ -83,8 +83,8 @@ func _game_process(delta: float) -> void:
 	_spawn_timer -= delta
 	if _spawn_timer <= 0.0:
 		_spawn_item()
-		var t := clampf(elapsed / duration, 0.0, 1.0)
-		_spawn_timer = lerpf(SPAWN_MAX, SPAWN_MIN, t) * randf_range(0.85, 1.15)
+		var t := clamp(elapsed / duration, 0.0, 1.0)
+		_spawn_timer = lerp(SPAWN_MAX, SPAWN_MIN, t) * rand_range(0.85, 1.15)
 	for b in _balls:
 		_update_ball(b, delta)
 	_collide_balls()
@@ -93,9 +93,9 @@ func _game_process(delta: float) -> void:
 
 
 func _update_ball(b: Ball, delta: float) -> void:
-	b.squash = lerpf(b.squash, 1.0, minf(1.0, delta * 10.0))
+	b.squash = lerp(b.squash, 1.0, min(1.0, delta * 10.0))
 	if b.stun > 0.0:
-		b.stun = maxf(0.0, b.stun - delta)
+		b.stun = max(0.0, b.stun - delta)
 		b.vx = move_toward(b.vx, 0.0, MOVE_SPEED * 3.0 * delta)
 	else:
 		var p := b.player
@@ -106,8 +106,8 @@ func _update_ball(b: Ball, delta: float) -> void:
 			b.vy = -JUMP_SPEED
 			b.on_ground = false
 			b.squash = 1.25
-			Sfx.play("move", randf_range(0.55, 0.7))
-	b.pos.x = clampf(b.pos.x + b.vx * delta,
+			Sfx.play("move", rand_range(0.55, 0.7))
+	b.pos.x = clamp(b.pos.x + b.vx * delta,
 			ARENA.position.x + BALL_RADIUS, ARENA.end.x - BALL_RADIUS)
 	if not b.on_ground:
 		b.vy += GRAVITY * delta
@@ -124,25 +124,25 @@ func _update_ball(b: Ball, delta: float) -> void:
 func _collide_balls() -> void:
 	for i in _balls.size():
 		for j in range(i + 1, _balls.size()):
-			var a := _balls[i]
-			var b := _balls[j]
-			if absf(a.pos.y - b.pos.y) > BALL_RADIUS * 1.4:
+			var a: Ball = _balls[i]
+			var b: Ball = _balls[j]
+			if abs(a.pos.y - b.pos.y) > BALL_RADIUS * 1.4:
 				continue
 			var d := b.pos.x - a.pos.x
 			var min_d := BALL_RADIUS * 2.0
-			if absf(d) >= min_d:
+			if abs(d) >= min_d:
 				continue
 			var side := 1.0 if d >= 0.0 else -1.0
-			var push := (min_d - absf(d)) * 0.5
+			var push := (min_d - abs(d)) * 0.5
 			a.pos.x -= side * push
 			b.pos.x += side * push
 			var avg := (a.vx + b.vx) * 0.5
-			a.vx = lerpf(a.vx, avg, 0.4)
-			b.vx = lerpf(b.vx, avg, 0.4)
+			a.vx = lerp(a.vx, avg, 0.4)
+			b.vx = lerp(b.vx, avg, 0.4)
 			a.squash = 0.9
 			b.squash = 0.9
-			a.pos.x = clampf(a.pos.x, ARENA.position.x + BALL_RADIUS, ARENA.end.x - BALL_RADIUS)
-			b.pos.x = clampf(b.pos.x, ARENA.position.x + BALL_RADIUS, ARENA.end.x - BALL_RADIUS)
+			a.pos.x = clamp(a.pos.x, ARENA.position.x + BALL_RADIUS, ARENA.end.x - BALL_RADIUS)
+			b.pos.x = clamp(b.pos.x, ARENA.position.x + BALL_RADIUS, ARENA.end.x - BALL_RADIUS)
 
 
 func _spawn_item() -> void:
@@ -155,9 +155,9 @@ func _spawn_item() -> void:
 	else:
 		it.kind = ITEM_COIN
 	var margin := 60.0
-	it.pos = Vector2(randf_range(ARENA.position.x + margin, ARENA.end.x - margin),
+	it.pos = Vector2(rand_range(ARENA.position.x + margin, ARENA.end.x - margin),
 			ARENA.position.y - 20.0)
-	it.vel = FALL_SPEED * randf_range(0.85, 1.15)
+	it.vel = FALL_SPEED * rand_range(0.85, 1.15)
 	_items.append(it)
 
 
@@ -173,7 +173,11 @@ func _update_items(delta: float) -> void:
 			if b.pos.distance_to(it.pos) < BALL_RADIUS + _item_radius(it.kind) * 0.8:
 				_collect(b, it)
 				break
-	_items = _items.filter(func(it): return not it.gone)
+	var live_items: Array = []
+	for it in _items:
+		if not it.gone:
+			live_items.append(it)
+	_items = live_items
 
 
 func _collect(b: Ball, it: Item) -> void:
@@ -184,15 +188,15 @@ func _collect(b: Ball, it: Item) -> void:
 			add_score(p, COIN_SCORE)
 			_pop(b.pos + Vector2(0, -46), "+%d" % COIN_SCORE, Color("c99b00"))
 			_burst(it.pos, Color("ffd34d"), 8)
-			Sfx.play("star", randf_range(1.0, 1.2))
+			Sfx.play("star", rand_range(1.0, 1.2))
 		ITEM_GEM:
 			add_score(p, GEM_SCORE)
 			_pop(b.pos + Vector2(0, -46), "+%d" % GEM_SCORE, WiiTheme.ACCENT_DARK)
 			_burst(it.pos, WiiTheme.ACCENT, 14)
-			Sfx.play("accept", randf_range(1.2, 1.35))
+			Sfx.play("accept", rand_range(1.2, 1.35))
 		ITEM_BOMB:
 			b.stun = STUN_TIME
-			set_score(p, maxi(0, int(get_score(p)) - BOMB_PENALTY))
+			set_score(p, max(0, int(get_score(p)) - BOMB_PENALTY))
 			_pop(b.pos + Vector2(0, -46), "-%d" % BOMB_PENALTY, Color("e25555"))
 			_burst(it.pos, Color("e25555"), 18)
 			Sfx.play("wave", 0.8)
@@ -213,19 +217,27 @@ func _pop(at: Vector2, text: String, color: Color) -> void:
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(90.0, 360.0)
-		_bursts.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.4, 0.8)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(90.0, 360.0)
+		_bursts.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.4, 0.8)])
 
 
 func _update_effects(delta: float) -> void:
 	for p in _pops:
 		p[3] += delta
-	_pops = _pops.filter(func(p): return p[3] < 0.9)
+	var live_pops: Array = []
+	for p in _pops:
+		if p[3] < 0.9:
+			live_pops.append(p)
+	_pops = live_pops
 	for c in _bursts:
 		c[0] += c[1] * delta
 		c[1] = c[1] * exp(-3.0 * delta) + Vector2(0, 700.0) * delta
 		c[3] -= delta
-	_bursts = _bursts.filter(func(c): return c[3] > 0.0)
+	var live_bursts: Array = []
+	for c in _bursts:
+		if c[3] > 0.0:
+			live_bursts.append(c)
+	_bursts = live_bursts
 
 
 # --- Dibujo ---
@@ -239,11 +251,11 @@ func _draw() -> void:
 		_draw_ball(b)
 	for c in _bursts:
 		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)),
-				Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+				Color(c[2], clamp(c[3] * 2.0, 0.0, 1.0)))
 	for p in _pops:
 		var t: float = p[3]
 		draw_text_centered(p[1], p[0] + Vector2(0, -40.0 * t), 26,
-				Color(p[2], clampf(1.0 - t / 0.9, 0.0, 1.0)))
+				Color(p[2], clamp(1.0 - t / 0.9, 0.0, 1.0)))
 
 
 func _draw_ground() -> void:
@@ -259,20 +271,22 @@ func _draw_item(it: Item) -> void:
 		return  # todavía no ha entrado en la zona visible
 	match it.kind:
 		ITEM_COIN:
-			var sx := 0.35 + 0.65 * absf(cos(it.spin))
+			var sx := 0.35 + 0.65 * abs(cos(it.spin))
 			draw_set_transform(it.pos, 0.0, Vector2(sx, 1.0))
 			draw_circle(Vector2.ZERO, r, Color("ffd34d"))
 			draw_circle(Vector2.ZERO, r * 0.62, Color("ffe89a"))
 			draw_arc(Vector2.ZERO, r - 1.0, 0.0, TAU, 24, Color("d9a300"), 2.5, true)
-			draw_set_transform(Vector2.ZERO)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		ITEM_GEM:
-			var pts := PackedVector2Array()
+			var pts := PoolVector2Array()
 			for i in 4:
 				pts.append(it.pos + Vector2.UP.rotated(it.spin * 0.8 + i * TAU / 4.0) * r)
 			draw_colored_polygon(pts, WiiTheme.ACCENT)
-			var outline := pts.duplicate()
+			var outline := PoolVector2Array()
+			for point in pts:
+				outline.append(point)
 			outline.append(pts[0])
-			draw_polyline(outline, Color.WHITE, 3.0, true)
+			draw_polyline(outline, Color(1, 1, 1, 1), 3.0, true)
 			draw_circle(it.pos + Vector2(-r * 0.25, -r * 0.25), r * 0.24,
 					Color(1, 1, 1, 0.5))
 		ITEM_BOMB:
@@ -286,17 +300,17 @@ func _draw_item(it: Item) -> void:
 func _draw_ball(b: Ball) -> void:
 	var alpha := 1.0
 	if b.stun > 0.0:
-		alpha = 0.4 + 0.6 * absf(sin(_time * 18.0))
-	var height := clampf((GROUND_Y - BALL_RADIUS - b.pos.y) / 260.0, 0.0, 1.0)
-	var shadow_scale := lerpf(1.0, 0.55, height)
+		alpha = 0.4 + 0.6 * abs(sin(_time * 18.0))
+	var height := clamp((GROUND_Y - BALL_RADIUS - b.pos.y) / 260.0, 0.0, 1.0)
+	var shadow_scale: float = lerp(1.0, 0.55, height)
 	# Sombra en el suelo, más pequeña cuanto más alto salta.
 	draw_set_transform(Vector2(b.pos.x, GROUND_Y - 4.0), 0.0,
 			Vector2(shadow_scale * 1.15, 0.3))
 	draw_circle(Vector2.ZERO, BALL_RADIUS, Color(WiiTheme.SHADOW, WiiTheme.SHADOW.a * alpha))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var col := b.player.color
 	if not b.player.is_connected_now():
-		col = col.lerp(Color("c8ced4"), 0.7)
+		col = col.linear_interpolate(Color("c8ced4"), 0.7)
 	col.a = alpha
 	var stretch := Vector2(1.0 / b.squash, b.squash)
 	draw_set_transform(b.pos, 0.0, stretch)
@@ -304,7 +318,7 @@ func _draw_ball(b: Ball) -> void:
 	draw_circle(Vector2(0, BALL_RADIUS * 0.25), BALL_RADIUS * 0.75, col.darkened(0.08))
 	draw_circle(Vector2(-BALL_RADIUS * 0.3, -BALL_RADIUS * 0.35), BALL_RADIUS * 0.38,
 			Color(1, 1, 1, 0.4 * alpha))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_text_centered(str(b.player.index + 1), b.pos, 28, Color(1, 1, 1, alpha))
 	if b.stun > 0.0:
 		draw_arc(b.pos, BALL_RADIUS + 8.0, 0.0, TAU, 24, Color("e25555", 0.8), 4.0, true)

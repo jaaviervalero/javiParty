@@ -2,14 +2,15 @@
 
 Juego party de minijuegos para Android TV (y PC) en el que cada jugador usa **su móvil
 como mando** mediante una app servidor DSU (protocolo cemuhook), p. ej. **DSU Controller**
-en iPhone o Android. Godot 4.7, GDScript, renderer Compatibility, 1280x720.
+en iPhone o Android. Godot **3.6.3**, GDScript, renderer **GLES2**, 1280x720
+(requisito de la tele: Mali-470 con OpenGL ES 2.0, donde Godot 4 no arranca).
 
 ## Ejecutar en PC (Linux)
 
 ```bash
-sudo pacman -S godot          # Godot 4.7
-godot --path . --import       # solo la primera vez (o abrir el proyecto en el editor)
-godot --path .                # lanzar el juego
+sudo pacman -S godot3         # Godot 3.6 (paquete godot3 de Arch/Omarchy)
+godot3 --path . --editor      # solo la primera vez: importa y crea .import/
+godot3 --path .               # lanzar el juego
 ```
 
 Controles en PC: flechas + Enter / Esc (igual que el mando de la tele), **F3** = overlay
@@ -55,9 +56,9 @@ Teclas: flechas = cruceta, z/x = A/B, -/+ , h = HOME (mismos bits que el mando d
 
 ```bash
 python3 tools/gen_fixtures.py                           # regenera los paquetes de ejemplo
-godot --headless --path . -s tests/run_tests.gd         # parseo DSU, CRC, mapeo de botones
+godot3 --headless --path . -s tests/run_tests.gd        # parseo DSU, CRC, mapeo de botones
 python3 tools/dsu_simulator.py --auto &                 # integración: escaneo + datos reales
-godot --headless --path . tests/e2e_scan.tscn
+godot3 --headless --path . tests/e2e_scan.tscn
 ```
 
 Los paquetes de ejemplo se generan con una implementación independiente en Python

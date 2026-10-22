@@ -1,8 +1,8 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Al compás" para el selector: escenario de concierto con
 ## guirnalda, altavoces y las dos formas de nota llegando a la línea.
 
-const BULB_COLORS: Array[Color] = [
+const BULB_COLORS = [
 	Color("ffb3a7"), Color("ffe08a"), Color("a9ddf5"), Color("c3ecb0"), Color("e0c8f5"),
 ]
 
@@ -10,10 +10,10 @@ const BULB_COLORS: Array[Color] = [
 static func draw(ci: CanvasItem, r: Rect2) -> void:
 	DrawKit.vgradient(ci, r, Color("e4ecfb"), Color("fff0da"))
 	# Guirnalda de bombillas.
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	for i in 9:
 		var t := float(i) / 8.0
-		pts.append(Vector2(lerpf(r.position.x + 8, r.end.x - 8, t),
+		pts.append(Vector2(lerp(r.position.x + 8, r.end.x - 8, t),
 				r.position.y + 10 + sin(t * PI) * 9))
 	ci.draw_polyline(pts, Color("cfd8e0"), 2.0, true)
 	for i in pts.size():
@@ -43,19 +43,19 @@ static func _note_circle(ci: CanvasItem, c: Vector2, rad: float, col: Color) -> 
 
 
 static func _note_diamond(ci: CanvasItem, c: Vector2, rad: float) -> void:
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	for i in 4:
 		pts.append(c + Vector2.UP.rotated(i * TAU / 4.0) * rad)
-	var shadow := PackedVector2Array()
+	var shadow := PoolVector2Array()
 	for p in pts:
 		shadow.append(p + Vector2(0, 3))
 	ci.draw_colored_polygon(shadow, Color(0.2, 0.3, 0.4, 0.14))
 	ci.draw_colored_polygon(pts, WiiTheme.ACCENT_DARK)
-	var inner := PackedVector2Array()
+	var inner := PoolVector2Array()
 	for i in 4:
 		inner.append(c + Vector2.UP.rotated(i * TAU / 4.0 + TAU / 8.0) * (rad * 0.42))
 	ci.draw_colored_polygon(inner, Color(1, 1, 1, 0.55))
-	var outline := pts.duplicate()
+	var outline := PoolVector2Array(pts)
 	outline.append(pts[0])
 	ci.draw_polyline(outline, Color(1, 1, 1, 0.85), 2.5, true)
 

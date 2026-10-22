@@ -1,5 +1,5 @@
 class_name Strings
-extends RefCounted
+extends Reference
 ## Textos de la interfaz en español e inglés. Se registran como Translation al
 ## arrancar (Settings), así que basta con poner la clave como texto de un Control
 ## o usar tr("CLAVE").
@@ -51,8 +51,8 @@ const TEXT := {
 }
 
 
-static func build_translations() -> Array[Translation]:
-	var out: Array[Translation] = []
+static func build_translations() -> Array:
+	var out: Array = []
 	for i in LOCALES.size():
 		var t := Translation.new()
 		t.locale = LOCALES[i]

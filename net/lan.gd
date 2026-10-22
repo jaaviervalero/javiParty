@@ -1,15 +1,15 @@
 class_name LAN
-extends RefCounted
+extends Reference
 ## Utilidades de red local sin estado (separadas del escáner para poder testearlas).
 
 
 ## De una lista de IPs locales, devuelve los prefijos /24 ("a.b.c.") de las
 ## IPv4 privadas: 10/8, 172.16/12 y 192.168/16. Así se ignoran loopback, VPN
 ## tipo Tailscale (100.64/10) e IPv6.
-static func private_ipv4_prefixes(addresses: PackedStringArray) -> PackedStringArray:
-	var out := PackedStringArray()
+static func private_ipv4_prefixes(addresses: PoolStringArray) -> PoolStringArray:
+	var out := PoolStringArray()
 	for addr in addresses:
-		var parts := addr.split(".")
+		var parts: PoolStringArray = addr.split(".")
 		if parts.size() != 4 or not addr.is_valid_ip_address():
 			continue
 		var a := parts[0].to_int()

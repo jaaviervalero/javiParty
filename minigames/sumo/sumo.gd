@@ -42,7 +42,7 @@ class Ball:
 	var bot := false
 
 
-var _balls: Array[Ball] = []
+var _balls: Array = []
 var _center := Vector2.ZERO
 var _radius := PLATFORM_RADIUS
 var _round := 0
@@ -50,7 +50,7 @@ var _round_time := 0.0
 var _pause_left := 0.0
 var _in_pause := false
 var _banner := ""
-var _banner_color := WiiTheme.TEXT
+var _banner_color: Color = WiiTheme.TEXT
 var _time := 0.0
 var _solo := false
 var _rings: Array = []      # [pos, t, color]
@@ -96,7 +96,7 @@ func _start_round() -> void:
 		for i in n:
 			var ang := -PI * 0.5 + TAU * float(i) / float(n)
 			_spawn(players[i], _center + Vector2(cos(ang), sin(ang)) * 150.0, false)
-	Sfx.play("join", randf_range(1.0, 1.1))
+	Sfx.play("join", rand_range(1.0, 1.1))
 
 
 func _spawn(p: Player, pos: Vector2, bot: bool) -> void:
@@ -120,7 +120,7 @@ func _game_process(delta: float) -> void:
 				_start_round()
 		return
 	_round_time += delta
-	_radius = maxf(PLATFORM_MIN_RADIUS, _radius - SHRINK_SPEED * delta)
+	_radius = max(PLATFORM_MIN_RADIUS, _radius - SHRINK_SPEED * delta)
 	for b in _balls:
 		if b.alive:
 			_update_ball(b, delta)
@@ -132,13 +132,13 @@ func _game_process(delta: float) -> void:
 
 
 func _update_ball(b: Ball, delta: float) -> void:
-	b.dash_cd = maxf(0.0, b.dash_cd - delta)
-	b.squash = lerpf(b.squash, 1.0, minf(1.0, delta * 10.0))
+	b.dash_cd = max(0.0, b.dash_cd - delta)
+	b.squash = lerp(b.squash, 1.0, min(1.0, delta * 10.0))
 	var dir := _control_dir(b)
 	if dir != Vector2.ZERO:
 		b.face = dir
 		var top := BOT_SPEED if b.bot else MAX_SPEED
-		b.vel = b.vel.lerp(dir * top, 1.0 - exp(-STEER * delta))
+		b.vel = b.vel.linear_interpolate(dir * top, 1.0 - exp(-STEER * delta))
 	else:
 		b.vel *= exp(-STEER * 0.5 * delta)
 	if not b.bot and b.player.just_pressed(Pad.A) and b.dash_cd <= 0.0:
@@ -146,7 +146,7 @@ func _update_ball(b: Ball, delta: float) -> void:
 		b.dash_cd = DASH_COOLDOWN
 		b.squash = 1.35
 		_rings.append([b.pos, 0.0, b.color])
-		Sfx.play("dash", randf_range(0.95, 1.1))
+		Sfx.play("dash", rand_range(0.95, 1.1))
 	b.pos += b.vel * delta
 
 
@@ -162,7 +162,7 @@ func _control_dir(b: Ball) -> Vector2:
 	if to.length() < 1.0:
 		return Vector2.ZERO
 	# Persecución con un ligero zigzag para que no vayan en línea recta perfecta.
-	var side := to.normalized().orthogonal() * sin(_time * 2.2 + b.pos.x * 0.01) * 0.5
+	var side := to.normalized().tangent() * sin(_time * 2.2 + b.pos.x * 0.01) * 0.5
 	return (to.normalized() + side).normalized()
 
 
@@ -176,8 +176,8 @@ func _player_ball() -> Ball:
 func _collide_balls() -> void:
 	for i in _balls.size():
 		for j in range(i + 1, _balls.size()):
-			var a := _balls[i]
-			var b := _balls[j]
+			var a: Ball = _balls[i]
+			var b: Ball = _balls[j]
 			if not a.alive or not b.alive:
 				continue
 			var d := b.pos - a.pos
@@ -195,8 +195,8 @@ func _collide_balls() -> void:
 				b.vel -= n * rel
 				a.squash = 0.86
 				b.squash = 0.86
-				if absf(rel) > 240.0:
-					Sfx.play("pop", randf_range(0.9, 1.15))
+				if abs(rel) > 240.0:
+					Sfx.play("pop", rand_range(0.9, 1.15))
 
 
 func _check_falls() -> void:
@@ -207,7 +207,7 @@ func _check_falls() -> void:
 			b.squash = 1.0
 			_rings.append([b.pos, 0.0, b.color])
 			_burst(b.pos, b.color, 10)
-			Sfx.play("leave", randf_range(0.9, 1.1))
+			Sfx.play("leave", rand_range(0.9, 1.1))
 
 
 func _check_round_end() -> void:
@@ -253,26 +253,34 @@ func _end_round(text: String, color: Color, won: bool) -> void:
 	_in_pause = true
 	_pause_left = ROUND_PAUSE
 	if won:
-		Sfx.play("star", randf_range(1.0, 1.1))
+		Sfx.play("star", rand_range(1.0, 1.1))
 	else:
 		Sfx.play("back", 0.9)
 
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(100.0, 380.0)
-		_confetti.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.45, 0.85)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(100.0, 380.0)
+		_confetti.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.45, 0.85)])
 
 
 func _update_effects(delta: float) -> void:
 	for r in _rings:
 		r[1] += delta * 2.4
-	_rings = _rings.filter(func(r): return r[1] < 1.0)
+	var live_rings: Array = []
+	for r in _rings:
+		if r[1] < 1.0:
+			live_rings.append(r)
+	_rings = live_rings
 	for c in _confetti:
 		c[0] += c[1] * delta
 		c[1] = c[1] * exp(-2.5 * delta) + Vector2(0, 400.0) * delta
 		c[3] -= delta
-	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
+	var live: Array = []
+	for c in _confetti:
+		if c[3] > 0.0:
+			live.append(c)
+	_confetti = live
 
 
 # --- Dibujo ---
@@ -286,7 +294,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.hills(ci, ARENA, ARENA.end.y - 92, 30, Color(CLOUD_HAZE, 0.75), 1.4, 1.7, clip)
 	DrawKit.hills(ci, ARENA, ARENA.end.y - 44, 18, Color(1, 1, 1, 0.9), 3.1, 1.3, clip)
 	# Nubes fijas alrededor del centro (que lo ocupa la plataforma).
-	var spots: Array[Vector3] = [
+	var spots: Array = [
 		Vector3(ARENA.position.x + 150, ARENA.position.y + 250, 1.15),
 		Vector3(ARENA.end.x - 160, ARENA.position.y + 300, 1.0),
 		Vector3(ARENA.position.x + 190, ARENA.end.y - 70, 1.35),
@@ -299,7 +307,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 
 ## Nubes que derivan despacio por detrás de la plataforma (lo único animado del fondo).
 func _draw_clouds() -> void:
-	var bases: Array[Vector2] = [
+	var bases: Array = [
 		Vector2(ARENA.position.x + 170, ARENA.position.y + 150),
 		Vector2(ARENA.end.x - 190, ARENA.position.y + 240),
 		Vector2(ARENA.position.x + 210, ARENA.end.y - 80),
@@ -320,30 +328,30 @@ func _draw() -> void:
 		_draw_ball(b)
 	for c in _confetti:
 		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)),
-				Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+				Color(c[2], clamp(c[3] * 2.0, 0.0, 1.0)))
 	_draw_round_label()
 	if _in_pause and _banner != "":
 		_draw_banner()
 
 
 func _draw_platform() -> void:
-	var danger := 1.0 - clampf((_radius - PLATFORM_MIN_RADIUS)
+	var danger := 1.0 - clamp((_radius - PLATFORM_MIN_RADIUS)
 			/ (PLATFORM_RADIUS - PLATFORM_MIN_RADIUS), 0.0, 1.0)
-	var top := PLATFORM_TOP.lerp(PLATFORM_DANGER, danger * 0.7)
-	var edge := PLATFORM_EDGE.lerp(PLATFORM_DANGER.darkened(0.08), danger * 0.55)
+	var top := PLATFORM_TOP.linear_interpolate(PLATFORM_DANGER, danger * 0.7)
+	var edge := PLATFORM_EDGE.linear_interpolate(PLATFORM_DANGER.darkened(0.08), danger * 0.55)
 	# Sombra en las nubes y canto: dos discos desplazados abajo dan volumen.
 	DrawKit.soft_shadow(self, _center + Vector2(0, _radius * 0.35 + 22.0), _radius * 1.7)
 	draw_circle(_center + Vector2(0, 16.0), _radius - 2.0, edge.darkened(0.12))
 	draw_circle(_center + Vector2(0, 8.0), _radius - 1.0, edge)
 	draw_circle(_center, _radius, top)
 	# Anillos de madera pintada, muy suaves.
-	var rings: Array[float] = [0.36, 0.58, 0.78, 0.94]
+	var rings: Array = [0.36, 0.58, 0.78, 0.94]
 	for f in rings:
-		draw_arc(_center, maxf(8.0, _radius * f), 0.0, TAU, 48,
+		draw_arc(_center, max(8.0, _radius * f), 0.0, TAU, 48,
 				Color(DrawKit.WOOD_DARK, 0.14), 2.0, true)
 	DrawKit.ellipse(self, _center + Vector2(-_radius * 0.3, -_radius * 0.45),
 			Vector2(_radius * 0.46, _radius * 0.2), Color(1, 1, 1, 0.16))
-	draw_arc(_center, _radius - 2.5, 0.0, TAU, 48, Color.WHITE, 5.0, true)
+	draw_arc(_center, _radius - 2.5, 0.0, TAU, 48, Color(1, 1, 1, 1), 5.0, true)
 
 
 func _draw_ball(b: Ball) -> void:
@@ -352,12 +360,12 @@ func _draw_ball(b: Ball) -> void:
 	var alpha := 1.0
 	var shrink := 1.0
 	if not b.alive:
-		var t := clampf(b.fall / FALL_TIME, 0.0, 1.0)
+		var t := clamp(b.fall / FALL_TIME, 0.0, 1.0)
 		alpha = 1.0 - t
 		shrink = 1.0 - t * 0.75
 	var col: Color = b.color
 	if b.player != null and not b.player.is_connected_now():
-		col = col.lerp(Color("c8ced4"), 0.7)
+		col = col.linear_interpolate(Color("c8ced4"), 0.7)
 	col.a = alpha
 	var r := BALL_RADIUS * shrink
 	var stretch := Vector2(1.0 / b.squash, b.squash)
@@ -368,7 +376,7 @@ func _draw_ball(b: Ball) -> void:
 	draw_circle(Vector2(0, BALL_RADIUS * 0.25), BALL_RADIUS * 0.75, col.darkened(0.08))
 	draw_circle(Vector2(-BALL_RADIUS * 0.3, -BALL_RADIUS * 0.35), BALL_RADIUS * 0.38,
 			Color(1, 1, 1, 0.4 * alpha))
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if b.player != null:
 		if b.alive:
 			draw_text_centered(str(b.player.index + 1), b.pos, 28, Color(1, 1, 1, alpha))
@@ -387,7 +395,7 @@ func _draw_round_label() -> void:
 		return
 	var txt := ""
 	if _solo:
-		var left := maxf(0.0, SOLO_ROUND_TIME - _round_time)
+		var left := max(0.0, SOLO_ROUND_TIME - _round_time)
 		txt = loc({"es": "Sobrevive %d s", "en": "Survive %d s"}) % int(ceil(left))
 	else:
 		txt = loc({"es": "Ronda %d de %d", "en": "Round %d of %d"}) % [_round, ROUNDS]

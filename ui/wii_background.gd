@@ -7,17 +7,17 @@ const STRIPE_STEP := 4
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	resized.connect(queue_redraw)
+	connect("resized", self, "update")
 
 
 func _draw() -> void:
-	var w := size.x
-	var h := size.y
+	var w := rect_size.x
+	var h := rect_size.y
 	draw_polygon(
-		PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-		PackedColorArray([WiiTheme.BG_TOP, WiiTheme.BG_TOP, WiiTheme.BG_BOTTOM, WiiTheme.BG_BOTTOM]))
+		PoolVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
+		PoolColorArray([WiiTheme.BG_TOP, WiiTheme.BG_TOP, WiiTheme.BG_BOTTOM, WiiTheme.BG_BOTTOM]))
 	var y := 0.0
 	while y < h:
 		draw_line(Vector2(0, y), Vector2(w, y), WiiTheme.STRIPE, 1.0)
@@ -28,11 +28,11 @@ func _draw() -> void:
 
 
 func _wave(base_y: float, amp: float, color: Color) -> void:
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	var steps := 48
 	for i in steps + 1:
-		var x := size.x * i / steps
+		var x: float = rect_size.x * i / steps
 		pts.append(Vector2(x, base_y + sin(i / float(steps) * TAU * 1.2) * amp))
-	pts.append(Vector2(size.x, size.y))
-	pts.append(Vector2(0, size.y))
+	pts.append(Vector2(rect_size.x, rect_size.y))
+	pts.append(Vector2(0, rect_size.y))
 	draw_colored_polygon(pts, color)

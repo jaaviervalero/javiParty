@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Concurso de dominadas": barra al aire libre con dos bolas colgadas.
 
 const METAL := Color("b6c2ca")
@@ -42,6 +42,6 @@ static func _draw_lifter(ci: CanvasItem, body: Vector2, bar_y: float, color: Col
 		var hand := Vector2(body.x + side * radius * 0.5, bar_y)
 		var shoulder := body + Vector2(side * radius * 0.55, -radius * 0.2)
 		var elbow := (shoulder + hand) * 0.5 + Vector2(side * radius * 0.5, 0.0)
-		ci.draw_polyline(PackedVector2Array([shoulder, elbow, hand]), arm, 5.0, true)
+		ci.draw_polyline(PoolVector2Array([shoulder, elbow, hand]), arm, 5.0, true)
 		ci.draw_circle(hand, 2.8, arm)
 	DrawKit.glossy_ball(ci, body, radius, color, false)

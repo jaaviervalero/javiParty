@@ -78,7 +78,7 @@ class Lifter:
 	var landed := false
 
 
-var _lifters: Array[Lifter] = []
+var _lifters: Array = []
 var _sparks: Array = []   # [pos, vel, color, vida]
 var _time := 0.0
 var _out_clock := 0.0
@@ -100,11 +100,11 @@ func _setup() -> void:
 	for i in n:
 		var l := Lifter.new()
 		l.player = players[i]
-		l.x = ARENA.position.x + ARENA.size.x * (float(i) + 0.5) / float(maxi(n, 1))
+		l.x = ARENA.position.x + ARENA.size.x * (float(i) + 0.5) / float(max(n, 1))
 		if n == 1:
 			# En solitario, centrar el conjunto personaje + barra de fuerza.
 			l.x -= 52.0
-		l.needle = randf_range(0.2, 0.8)
+		l.needle = rand_range(0.2, 0.8)
 		l.needle_dir = 1.0 if randf() < 0.5 else -1.0
 		l.zone_half = BASE_ZONE_HALF
 		l.speed = BASE_NEEDLE_SPEED
@@ -134,8 +134,8 @@ func _game_process(delta: float) -> void:
 
 
 func _update_lifter(l: Lifter, delta: float) -> void:
-	l.shake = maxf(0.0, l.shake - delta)
-	l.grip_flash = maxf(0.0, l.grip_flash - delta)
+	l.shake = max(0.0, l.shake - delta)
+	l.grip_flash = max(0.0, l.grip_flash - delta)
 
 	if l.out:
 		l.fall_t += delta
@@ -146,7 +146,7 @@ func _update_lifter(l: Lifter, delta: float) -> void:
 		return
 
 	if l.rest_t > 0.0:
-		l.rest_t = maxf(0.0, l.rest_t - delta)
+		l.rest_t = max(0.0, l.rest_t - delta)
 
 	# La aguja sube y baja sola, cada vez más rápido.
 	l.needle += l.needle_dir * l.speed * delta
@@ -170,7 +170,7 @@ func _update_lifter(l: Lifter, delta: float) -> void:
 		return
 
 	if l.player.just_pressed(Pad.A):
-		if absf(l.needle - ZONE_CENTER) <= l.zone_half:
+		if abs(l.needle - ZONE_CENTER) <= l.zone_half:
 			_do_pull_up(l)
 		else:
 			_miss(l)
@@ -183,17 +183,17 @@ func _do_pull_up(l: Lifter) -> void:
 	l.pulls += 1
 	add_score(l.player, 1)
 	# Cansancio personal: zona más pequeña y aguja más rápida.
-	l.zone_half = maxf(MIN_ZONE_HALF, l.zone_half - ZONE_SHRINK)
-	l.speed = minf(MAX_NEEDLE_SPEED, l.speed + NEEDLE_ACCEL)
+	l.zone_half = max(MIN_ZONE_HALF, l.zone_half - ZONE_SHRINK)
+	l.speed = min(MAX_NEEDLE_SPEED, l.speed + NEEDLE_ACCEL)
 	_burst(Vector2(l.x, BAR_Y), l.player.color, 10)
-	Sfx.play("pop", minf(1.0 + 0.05 * float(l.pulls), 1.9))
+	Sfx.play("pop", min(1.0 + 0.05 * float(l.pulls), 1.9))
 
 
 func _miss(l: Lifter) -> void:
 	l.shake = SHAKE_TIME
-	l.grip = maxf(0.0, l.grip - MISS_GRIP)
+	l.grip = max(0.0, l.grip - MISS_GRIP)
 	l.grip_flash = 0.45
-	Sfx.play("back", randf_range(0.7, 0.85))
+	Sfx.play("back", rand_range(0.7, 0.85))
 	_burst(Vector2(l.x, BAR_Y + 24.0), DANGER_COLOR, 6)
 	if l.grip <= 0.0:
 		l.out = true
@@ -204,13 +204,13 @@ func _miss(l: Lifter) -> void:
 		l.rest_t = 0.0
 		l.fall_from = _body_pos(l)
 		l.fall_dir = -1.0 if randf() < 0.5 else 1.0
-		Sfx.play("leave", randf_range(0.9, 1.05))
+		Sfx.play("leave", rand_range(0.9, 1.05))
 
 
 func _rest(l: Lifter) -> void:
 	l.rest_t = REST_TIME
-	l.zone_half = minf(BASE_ZONE_HALF, l.zone_half + REST_ZONE_GAIN)
-	l.speed = maxf(BASE_NEEDLE_SPEED, l.speed - REST_SPEED_RELIEF)
+	l.zone_half = min(BASE_ZONE_HALF, l.zone_half + REST_ZONE_GAIN)
+	l.speed = max(BASE_NEEDLE_SPEED, l.speed - REST_SPEED_RELIEF)
 	Sfx.play("wave", 1.25)
 
 
@@ -220,27 +220,27 @@ func _pull_lift(t: float) -> float:
 		return _smooth(t / PULL_UP_TIME) * PULL_OVERSHOOT
 	var t2 := t - PULL_UP_TIME
 	if t2 < PULL_BOUNCE_TIME:
-		return lerpf(PULL_OVERSHOOT, PULL_BOUNCE_LOW, _smooth(t2 / PULL_BOUNCE_TIME))
+		return lerp(PULL_OVERSHOOT, PULL_BOUNCE_LOW, _smooth(t2 / PULL_BOUNCE_TIME))
 	var t3 := t - PULL_UP_TIME - PULL_BOUNCE_TIME
-	return lerpf(PULL_BOUNCE_LOW, 0.0, _smooth(t3 / PULL_DOWN_TIME))
+	return lerp(PULL_BOUNCE_LOW, 0.0, _smooth(t3 / PULL_DOWN_TIME))
 
 
 func _smooth(t: float) -> float:
-	var k := clampf(t, 0.0, 1.0)
+	var k := clamp(t, 0.0, 1.0)
 	return k * k * (3.0 - 2.0 * k)
 
 
 func _body_pos(l: Lifter) -> Vector2:
-	var y := lerpf(HANG_Y, UP_Y, l.lift)
+	var y: float = lerp(HANG_Y, UP_Y, l.lift)
 	var sway := sin(_time * 2.2 + float(l.player.index) * 1.7) * 2.5 * (1.0 - l.lift)
-	var shake := sin(_time * 55.0) * 5.0 * clampf(l.shake / SHAKE_TIME, 0.0, 1.0)
+	var shake: float = sin(_time * 55.0) * 5.0 * clamp(l.shake / SHAKE_TIME, 0.0, 1.0)
 	return Vector2(l.x + sway + shake, y)
 
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(80.0, 260.0)
-		_sparks.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.35, 0.6)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(80.0, 260.0)
+		_sparks.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.35, 0.6)])
 
 
 func _update_effects(delta: float) -> void:
@@ -248,7 +248,11 @@ func _update_effects(delta: float) -> void:
 		s[0] += s[1] * delta
 		s[1] = s[1] * exp(-2.8 * delta) + Vector2(0, 460.0) * delta
 		s[3] -= delta
-	_sparks = _sparks.filter(func(s): return s[3] > 0.0)
+	var live_sparks: Array = []
+	for s in _sparks:
+		if s[3] > 0.0:
+			live_sparks.append(s)
+	_sparks = live_sparks
 
 
 # --- Dibujo ---
@@ -262,10 +266,10 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.hills(ci, ARENA, GROUND_Y + 20.0, 55.0, HILL_FAR, 1.1, 1.5, clip)
 	DrawKit.hills(ci, ARENA, GROUND_Y + 42.0, 28.0, HILL_NEAR, 2.8, 1.7, clip)
 	# Césped y borde, recortados a las esquinas redondeadas de la arena.
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		Vector2(ARENA.position.x, GROUND_Y), Vector2(ARENA.end.x, GROUND_Y),
 		ARENA.end, Vector2(ARENA.position.x, ARENA.end.y)]), clip, GRASS_GROUND)
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		Vector2(ARENA.position.x, GROUND_Y), Vector2(ARENA.end.x, GROUND_Y),
 		Vector2(ARENA.end.x, GROUND_Y + 9.0), Vector2(ARENA.position.x, GROUND_Y + 9.0)]),
 		clip, GRASS_EDGE)
@@ -274,7 +278,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	for i in 8:
 		DrawKit.flower(ci, Vector2(ARENA.position.x + 96.0 + i * 148.0,
 				GROUND_Y + 152.0 + float(i % 3) * 10.0), 5.0,
-				Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
+				Color(1, 1, 1, 1) if i % 2 == 0 else Color("ffd1e3"))
 	for l in _lifters:
 		_draw_stand(ci, l)
 	DrawKit.arena_border(ci, ARENA)
@@ -291,7 +295,7 @@ func _draw() -> void:
 		_draw_force_bar(l)
 		_draw_grip_meter(l)
 	for s in _sparks:
-		draw_circle(s[0], 3.0, Color(s[2], clampf(s[3] * 3.0, 0.0, 1.0)))
+		draw_circle(s[0], 3.0, Color(s[2], clamp(s[3] * 3.0, 0.0, 1.0)))
 	for l in _lifters:
 		_draw_lifter(l)
 
@@ -364,10 +368,13 @@ func _draw_force_bar(l: Lifter) -> void:
 
 func _draw_grip_meter(l: Lifter) -> void:
 	var gx := l.x + FORCE_OFFSET - GRIP_W * 0.5
-	var ratio := clampf(l.grip / GRIP_MAX, 0.0, 1.0)
+	var ratio: float = clamp(l.grip / GRIP_MAX, 0.0, 1.0)
 	var track := WiiTheme.panel_style(8, WiiTheme.PANEL_BORDER, Color(1.0, 1.0, 1.0, 0.95))
 	track.shadow_size = 3
-	track.set_content_margin_all(0)
+	track.content_margin_left = 0
+	track.content_margin_right = 0
+	track.content_margin_top = 0
+	track.content_margin_bottom = 0
 	draw_style_box(track, Rect2(gx, GRIP_Y, GRIP_W, GRIP_H))
 	if ratio > 0.0:
 		var fill := ZONE_COLOR
@@ -385,20 +392,20 @@ func _draw_lifter(l: Lifter) -> void:
 	var p := l.player
 	var col := p.color
 	if not p.is_connected_now():
-		col = col.lerp(Color("c8ced4"), 0.7)
+		col = col.linear_interpolate(Color("c8ced4"), 0.7)
 	if l.out:
-		var t := clampf(l.fall_t / FALL_TIME, 0.0, 1.0)
+		var t: float = clamp(l.fall_t / FALL_TIME, 0.0, 1.0)
 		var e := t * t
 		var pos := Vector2(
-				lerpf(l.fall_from.x, l.fall_from.x + l.fall_dir * 30.0, e),
-				lerpf(l.fall_from.y, GROUND_Y - BODY_RADIUS * 0.8, e))
-		_draw_body(pos, col.lerp(Color("9aa4ac"), 0.45), p, true)
+				lerp(l.fall_from.x, l.fall_from.x + l.fall_dir * 30.0, e),
+				lerp(l.fall_from.y, GROUND_Y - BODY_RADIUS * 0.8, e))
+		_draw_body(pos, col.linear_interpolate(Color("9aa4ac"), 0.45), p, true)
 		return
 	var body := _body_pos(l)
 	_draw_arms(l, body, col)
 	_draw_body(body, col, p, false)
 	if l.rest_t > 0.0:
-		var t := clampf(l.rest_t / REST_TIME, 0.0, 1.0)
+		var t: float = clamp(l.rest_t / REST_TIME, 0.0, 1.0)
 		draw_arc(body, BODY_RADIUS + 12.0, -PI * 0.5, -PI * 0.5 + TAU * t,
 				28, Color(WiiTheme.ACCENT, 0.85), 5.0, true)
 
@@ -413,7 +420,7 @@ func _draw_arms(l: Lifter, body: Vector2, col: Color) -> void:
 		var hand := Vector2(l.x + side * GRIP_SPREAD, BAR_Y)
 		var mid := (sh + hand) * 0.5
 		var elbow := mid + Vector2(side * flare, 8.0 + 10.0 * l.lift)
-		draw_polyline(PackedVector2Array([sh, elbow, hand]), arm, 14.0, true)
+		draw_polyline(PoolVector2Array([sh, elbow, hand]), arm, 14.0, true)
 		draw_circle(sh, 7.0, arm)
 		draw_circle(elbow, 7.5, arm)
 		draw_circle(hand, 8.0, arm)

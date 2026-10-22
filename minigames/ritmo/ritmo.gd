@@ -26,7 +26,7 @@ const SPEAKER := Color("b9c6d6")
 const SPEAKER_DARK := Color("93a4b8")
 const SPEAKER_LIGHT := Color("d6e0ea")
 const GARLAND := Color("cfd8e0")
-const BULB_COLORS: Array[Color] = [
+const BULB_COLORS = [
 	Color("ffb3a7"), Color("ffe08a"), Color("a9ddf5"), Color("c3ecb0"), Color("e0c8f5"),
 ]
 const BULB_COUNT := 11
@@ -35,7 +35,7 @@ const BULB_COUNT := 11
 class Note:
 	var t := 0.0
 	var kind := KIND_A
-	var judged: Array[bool] = []
+	var judged: Array = []
 
 
 class Track:
@@ -43,8 +43,8 @@ class Track:
 	var combo := 0
 
 
-var _tracks: Array[Track] = []
-var _notes: Array[Note] = []
+var _tracks: Array = []
+var _notes: Array = []
 var _feedback: Array = []      # [carril, texto, edad, color]
 var _rings: Array = []         # [carril, edad, color]
 var _song_t := 0.0
@@ -107,11 +107,11 @@ func _add_note(at: float, kind: int) -> void:
 
 func _game_process(delta: float) -> void:
 	_song_t += delta
-	_miss_cd = maxf(0.0, _miss_cd - delta)
+	_miss_cd = max(0.0, _miss_cd - delta)
 	_beat_phase += delta * _bpm_at(_song_t) / 60.0
 
 	for i in _tracks.size():
-		var tr := _tracks[i]
+		var tr = _tracks[i]
 		if tr.player.just_pressed(Pad.A):
 			_attempt(i, KIND_A)
 		if tr.player.just_pressed(Pad.B):
@@ -120,10 +120,18 @@ func _game_process(delta: float) -> void:
 
 	for f in _feedback:
 		f[2] += delta
-	_feedback = _feedback.filter(func(f): return f[2] < FEEDBACK_SEC)
+	var live_feedback: Array = []
+	for f in _feedback:
+		if f[2] < FEEDBACK_SEC:
+			live_feedback.append(f)
+	_feedback = live_feedback
 	for r in _rings:
 		r[1] += delta
-	_rings = _rings.filter(func(r): return r[1] < 0.3)
+	var live_rings: Array = []
+	for r in _rings:
+		if r[1] < 0.3:
+			live_rings.append(r)
+	_rings = live_rings
 
 
 func _bpm_at(t: float) -> float:
@@ -137,7 +145,7 @@ func _attempt(lane: int, kind: int) -> void:
 		var n: Note = _notes[i]
 		if n.judged[lane]:
 			continue
-		var d := absf(n.t - _song_t)
+		var d := abs(n.t - _song_t)
 		if d < best_dt:
 			best_dt = d
 			best_i = i
@@ -145,8 +153,8 @@ func _attempt(lane: int, kind: int) -> void:
 		return
 	var note: Note = _notes[best_i]
 	note.judged[lane] = true
-	var tr := _tracks[lane]
-	var col := tr.player.color
+	var tr = _tracks[lane]
+	var col = tr.player.color
 	if note.kind != kind:
 		tr.combo = 0
 		Sfx.play("back", 0.8)
@@ -156,7 +164,7 @@ func _attempt(lane: int, kind: int) -> void:
 		var mul := 2 if tr.combo >= COMBO_MULT else 1
 		add_score(tr.player, 3 * mul)
 		_rings.append([lane, 0.0, Color("ffd34d")])
-		var pitch := (1.14 if note.kind == KIND_B else 0.94) * randf_range(0.98, 1.05)
+		var pitch := (1.14 if note.kind == KIND_B else 0.94) * rand_range(0.98, 1.05)
 		Sfx.play("star", pitch)
 		_feedback.append([lane, loc({"es": "¡Perfecto!", "en": "Perfect!"}), 0.0, Color("ffd34d")])
 	elif best_dt <= GOOD_WIN:
@@ -164,7 +172,7 @@ func _attempt(lane: int, kind: int) -> void:
 		var mul2 := 2 if tr.combo >= COMBO_MULT else 1
 		add_score(tr.player, 1 * mul2)
 		_rings.append([lane, 0.0, col])
-		var pitch2 := (1.22 if note.kind == KIND_B else 1.0) * randf_range(0.97, 1.05)
+		var pitch2 := (1.22 if note.kind == KIND_B else 1.0) * rand_range(0.97, 1.05)
 		Sfx.play("pop", pitch2)
 		_feedback.append([lane, loc({"es": "Bien", "en": "Good"}), 0.0, col.darkened(0.1)])
 	else:
@@ -172,7 +180,7 @@ func _attempt(lane: int, kind: int) -> void:
 		Sfx.play("back", 0.9)
 		_feedback.append([lane, loc({"es": "Fallo", "en": "Miss"}), 0.0, Color("e25555")])
 	if _feedback.size() > MAX_FEEDBACK:
-		_feedback = _feedback.slice(_feedback.size() - MAX_FEEDBACK)
+		_feedback = _feedback.slice(_feedback.size() - MAX_FEEDBACK, _feedback.size())
 
 
 func _update_misses() -> void:
@@ -191,7 +199,7 @@ func _update_misses() -> void:
 			if randf() < 0.5:
 				_feedback.append([lane, loc({"es": "Fallo", "en": "Miss"}), 0.0, Color("e25555")])
 				if _feedback.size() > MAX_FEEDBACK:
-					_feedback = _feedback.slice(_feedback.size() - MAX_FEEDBACK)
+					_feedback = _feedback.slice(_feedback.size() - MAX_FEEDBACK, _feedback.size())
 
 
 # --- Dibujo ---
@@ -200,13 +208,13 @@ func _update_misses() -> void:
 func _draw_scenery(ci: CanvasItem) -> void:
 	var clip := DrawKit.rounded_rect_points(ARENA, 30)
 	DrawKit.arena_frame(ci, ARENA, STAGE_TOP, STAGE_BOTTOM)
-	var n := maxi(1, _tracks.size())
+	var n := max(1, _tracks.size())
 	var lane_h := (ARENA.size.y - 16.0) / float(n)
 	# Fondos y separadores de carril.
 	for i in _tracks.size():
 		var y := ARENA.position.y + 8.0 + lane_h * (float(i) + 0.5)
-		var col := _tracks[i].player.color
-		DrawKit.clipped_polygon(ci, PackedVector2Array([
+		var col = _tracks[i].player.color
+		DrawKit.clipped_polygon(ci, PoolVector2Array([
 			Vector2(ARENA.position.x + 6, y - lane_h * 0.5 + 2),
 			Vector2(ARENA.end.x - 6, y - lane_h * 0.5 + 2),
 			Vector2(ARENA.end.x - 6, y + lane_h * 0.5 - 2),
@@ -224,13 +232,13 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.arena_border(ci, ARENA)
 
 
-func _garland_points() -> PackedVector2Array:
-	var pts := PackedVector2Array()
+func _garland_points() -> PoolVector2Array:
+	var pts := PoolVector2Array()
 	var x0 := ARENA.position.x + 70.0
 	var x1 := ARENA.end.x - 70.0
 	for i in BULB_COUNT:
 		var t := float(i) / float(BULB_COUNT - 1)
-		pts.append(Vector2(lerpf(x0, x1, t), ARENA.position.y + 18.0 + sin(t * PI) * 24.0))
+		pts.append(Vector2(lerp(x0, x1, t), ARENA.position.y + 18.0 + sin(t * PI) * 24.0))
 	return pts
 
 
@@ -263,7 +271,7 @@ func _draw() -> void:
 		draw_circle(p, r * 1.9, Color(c, 0.16 * local))
 		draw_circle(p, r, Color(c, 0.6 + 0.35 * local))
 		draw_circle(p - Vector2(r * 0.3, r * 0.3), r * 0.32, Color(1, 1, 1, 0.7))
-	var n := maxi(1, _tracks.size())
+	var n := max(1, _tracks.size())
 	var lane_h := (ARENA.size.y - 16.0) / float(n)
 	# Pulse del metrónomo: la línea late con cada beat.
 	var pulse := 1.0 - fmod(_beat_phase, 1.0)
@@ -292,7 +300,7 @@ func _draw() -> void:
 		if lane_i >= _tracks.size():
 			continue
 		var fy: float = ARENA.position.y + 8.0 + lane_h * (float(lane_i) + 0.5) - 34.0 - float(f[2]) * 34.0
-		var a := clampf(1.0 - f[2] / FEEDBACK_SEC, 0.0, 1.0)
+		var a := clamp(1.0 - f[2] / FEEDBACK_SEC, 0.0, 1.0)
 		draw_text_centered(f[1], Vector2(HIT_X + 190, fy), 22, Color(f[3], a))
 	for r in _rings:
 		var lane_r: int = r[0]
@@ -314,7 +322,7 @@ func _draw_track(tr: Track, y: float) -> void:
 	draw_circle(c + Vector2(0, 4), 24, WiiTheme.SHADOW)
 	draw_circle(c, 24, col)
 	draw_circle(c + Vector2(-7, -8), 8, Color(1, 1, 1, 0.4))
-	draw_text_centered(str(p.index + 1), c, 22, Color.WHITE)
+	draw_text_centered(str(p.index + 1), c, 22, Color(1, 1, 1, 1))
 	if tr.combo >= COMBO_MULT:
 		draw_text_centered("x2", Vector2(HIT_X - 72.0, y + 38.0), 22, Color("ffd34d"))
 	elif tr.combo > 1:
@@ -329,18 +337,18 @@ func _draw_note(c: Vector2, kind: int, col: Color) -> void:
 				Color(1, 1, 1, 0.5))
 		draw_arc(c, NOTE_R - 1.0, 0, TAU, 24, Color(1, 1, 1, 0.85), 3.0, true)
 	else:
-		var pts := PackedVector2Array()
+		var pts := PoolVector2Array()
 		for i in 4:
 			pts.append(c + Vector2.UP.rotated(i * TAU / 4.0) * (NOTE_R + 4.0))
-		var shadow := PackedVector2Array()
+		var shadow := PoolVector2Array()
 		for pt in pts:
 			shadow.append(pt + Vector2(0, 4))
 		draw_colored_polygon(shadow, WiiTheme.SHADOW)
 		draw_colored_polygon(pts, WiiTheme.ACCENT_DARK)
-		var inner := PackedVector2Array()
+		var inner := PoolVector2Array()
 		for i in 4:
 			inner.append(c + Vector2.UP.rotated(i * TAU / 4.0 + TAU / 8.0) * (NOTE_R * 0.42))
 		draw_colored_polygon(inner, Color(1, 1, 1, 0.55))
-		var outline := pts.duplicate()
+		var outline := PoolVector2Array(pts)
 		outline.append(pts[0])
 		draw_polyline(outline, Color(1, 1, 1, 0.85), 3.0, true)

@@ -1,5 +1,5 @@
 class_name Player
-extends RefCounted
+extends Reference
 ## Un jugador (1-4). Sobrevive a desconexiones: si el mismo dispositivo vuelve,
 ## PlayerManager le reasigna su controller.
 
@@ -7,13 +7,13 @@ var index: int        # 0..3
 var color: Color
 var name: String
 var device_id: String # ver DSUController.device_id()
-var controller: DSUController
+var controller = null # DSUController (sin tipo para evitar dependencias circulares)
 var score := 0
 ## Traducción de bits DSU a botones lógicos (Pad.*). De momento todos usan el
 ## diseño Wiimote de DSU Controller; más adelante será configurable por móvil.
 var layout: Dictionary = Pad.LAYOUT_DSUCONTROLLER_WIIMOTE
 ## Sujeción actual: cada minijuego la fija al empezar (ver Pad.Grip).
-var grip := Pad.Grip.VERTICAL
+var grip: int = Pad.Grip.VERTICAL
 ## Jugador simulado (tests automáticos): sus entradas vienen de bot_buttons/bot_stick.
 var bot := false
 var bot_buttons := 0
@@ -56,7 +56,7 @@ func update_buttons() -> void:
 func stick() -> Vector2:
 	if not is_connected_now():
 		return Vector2.ZERO
-	var v := bot_stick if bot else controller.left_stick
+	var v: Vector2 = bot_stick if bot else controller.left_stick
 	return Vector2.ZERO if v.length() < STICK_DEADZONE else v
 
 
@@ -66,7 +66,7 @@ func _stick_as_dpad() -> int:
 	var v := stick()
 	var out := 0
 	for dir in [[Pad.RIGHT, v.x], [Pad.LEFT, -v.x], [Pad.DOWN, v.y], [Pad.UP, -v.y]]:
-		var threshold := STICK_RELEASE if _prev_buttons & dir[0] else STICK_PRESS
+		var threshold: float = STICK_RELEASE if _prev_buttons & dir[0] else STICK_PRESS
 		if dir[1] > threshold:
 			out |= dir[0]
 	return out

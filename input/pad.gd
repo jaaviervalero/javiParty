@@ -1,5 +1,5 @@
 class_name Pad
-extends RefCounted
+extends Reference
 ## Botones LÓGICOS del juego, estilo Wiimote: cruceta, A, B, 1, 2, −, +, HOME.
 ## Los minijuegos usan solo estos; cada app DSU los manda en bits distintos, así que
 ## se traducen con un "layout" (bit DSU crudo -> botón lógico).
@@ -64,7 +64,7 @@ static func _rotate_dpad(b: int) -> int:
 
 
 static func to_string_names(b: int) -> String:
-	var names := PackedStringArray()
+	var names := PoolStringArray()
 	for bit in NAMES:
 		if b & bit:
 			names.append(NAMES[bit])

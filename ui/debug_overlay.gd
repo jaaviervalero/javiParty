@@ -12,23 +12,23 @@ var _timer := 0.0
 
 func _ready() -> void:
 	layer = 100
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_mode = Node.PAUSE_MODE_PROCESS
 	_panel = PanelContainer.new()
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.1, 0.13, 0.82)
 	style.set_corner_radius_all(10)
-	style.set_content_margin_all(12)
-	_panel.add_theme_stylebox_override("panel", style)
-	_panel.position = Vector2(12, 12)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 12
+	style.content_margin_bottom = 12
+	_panel.add_stylebox_override("panel", style)
+	_panel.rect_position = Vector2(12, 12)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 	_label = Label.new()
-	_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	var mono := SystemFont.new()
-	mono.font_names = PackedStringArray(["DejaVu Sans Mono", "Droid Sans Mono", "monospace"])
-	_label.add_theme_font_override("font", mono)
-	_label.add_theme_font_size_override("font_size", 13)
-	_label.add_theme_color_override("font_color", Color("d8f3ff"))
+	# Godot 3.6 no tiene SystemFont: la fuente de depuración es la del juego.
+	_label.add_font_override("font", Fonts.get_font(400, 13))
+	_label.add_color_override("font_color", Color("d8f3ff"))
 	_panel.add_child(_label)
 	visible = Settings.debug_overlay
 
@@ -42,7 +42,7 @@ func toggle() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_toggle"):
 		toggle()
-		get_viewport().set_input_as_handled()
+		get_tree().set_input_as_handled()
 
 
 func _process(delta: float) -> void:
@@ -53,11 +53,11 @@ func _process(delta: float) -> void:
 		return
 	_timer = 0.0
 	_label.text = _build_text()
-	_panel.reset_size()
+	_panel.rect_size = _panel.get_combined_minimum_size()
 
 
 func _build_text() -> String:
-	var lines := PackedStringArray()
+	var lines := PoolStringArray()
 	var s: Dictionary = DSUClient.stats
 	lines.append("javiParty debug · %d fps · IPs %s · UDP local :%d · id %08x" % [
 		Engine.get_frames_per_second(), ", ".join(_local_ipv4()), DSUClient.local_port, DSUClient.client_id])
@@ -65,9 +65,9 @@ func _build_text() -> String:
 		"ON" if NetworkScanner.active else "OFF", ",".join(NetworkScanner.subnets), NetworkScanner.sweeps,
 		DSUClient.server_count(), s.rx, s.bad_crc, s.bad_version, s.bad_size, s.bad_magic,
 		s.unknown_type, s.unknown_sender])
-	if DSUClient.controllers.is_empty():
+	if DSUClient.controllers.empty():
 		lines.append("(sin mandos)")
-	for c: DSUController in DSUClient.controllers.values():
+	for c in DSUClient.controllers.values():
 		lines.append("")
 		lines.append("%s %s  MAC %s  modelo %d  conexión %d  batería 0x%02x" % [
 			_player_tag(c), c.key, DSUProtocol.mac_to_string(c.mac), c.model, c.connection, c.battery])
@@ -86,14 +86,14 @@ func _build_text() -> String:
 	return "\n".join(lines)
 
 
-func _player_tag(c: DSUController) -> String:
+func _player_tag(c) -> String:
 	for p in PlayerManager.players:
 		if p != null and p.controller == c:
 			return "J%d" % (p.index + 1)
 	return "--"
 
 
-func _logical_buttons(c: DSUController) -> String:
+func _logical_buttons(c) -> String:
 	for p in PlayerManager.players:
 		if p != null and p.controller == c:
 			return Pad.to_string_names(p.buttons())
@@ -106,8 +106,8 @@ func _touch(t: Dictionary) -> String:
 	return "#%d (%d,%d)" % [t.id, t.pos.x, t.pos.y]
 
 
-func _local_ipv4() -> PackedStringArray:
-	var out := PackedStringArray()
+func _local_ipv4() -> PoolStringArray:
+	var out := PoolStringArray()
 	for a in IP.get_local_addresses():
 		if a.split(".").size() == 4 and not a.begins_with("127."):
 			out.append(a)

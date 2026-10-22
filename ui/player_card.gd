@@ -8,6 +8,7 @@ var _name: Label
 var _status: Label
 var _detail: Label
 var _was_connected := false
+var _tween: Tween
 
 
 func _init(p_index: int) -> void:
@@ -15,16 +16,16 @@ func _init(p_index: int) -> void:
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(260, 210)
-	pivot_offset = custom_minimum_size / 2
+	rect_min_size = Vector2(260, 210)
+	rect_pivot_offset = rect_min_size / 2
 	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 6)
+	box.alignment = BoxContainer.ALIGN_CENTER
+	box.add_constant_override("separation", 6)
 	add_child(box)
 
 	_dot = Control.new()
-	_dot.custom_minimum_size = Vector2(0, 76)
-	_dot.draw.connect(_draw_dot)
+	_dot.rect_min_size = Vector2(0, 76)
+	_dot.connect("draw", self, "_draw_dot")
 	box.add_child(_dot)
 
 	_name = _label(box, 26, WiiTheme.TEXT)
@@ -35,61 +36,62 @@ func _ready() -> void:
 
 func _label(parent: Node, font_size: int, color: Color) -> Label:
 	var l := Label.new()
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", font_size)
-	l.add_theme_color_override("font_color", color)
+	l.align = Label.ALIGN_CENTER
+	l.add_font_override("font", Fonts.get_font(700, font_size))
+	l.add_color_override("font_color", color)
 	parent.add_child(l)
 	return l
 
 
-func _player() -> Player:
+func _player():
 	return PlayerManager.players[index]
 
 
 func refresh() -> void:
-	var p := _player()
-	var connected := p != null and p.is_connected_now()
+	var p = _player()
+	var connected: bool = p != null and p.is_connected_now()
 	_name.text = tr("PLAYER_N") % (index + 1)
 	if p == null:
 		_status.text = tr("WAITING_PLAYER")
 		_detail.text = ""
 	else:
 		_status.text = tr("STATUS_CONNECTED") if connected else tr("STATUS_DISCONNECTED")
-		var c := p.controller
+		var c = p.controller
 		_detail.text = "%s · %s %s" % [c.ip, tr("BATTERY"), battery_text(c.battery)]
 	var style := WiiTheme.panel_style(26, PlayerManager.COLORS[index] if connected else WiiTheme.PANEL_BORDER)
 	if connected:
 		style.set_border_width_all(4)
-	add_theme_stylebox_override("panel", style)
+	add_stylebox_override("panel", style)
 	modulate.a = 1.0 if p != null else 0.75
 	if connected and not _was_connected:
 		_pop()
 	_was_connected = connected
-	_dot.queue_redraw()
+	_dot.update()
 
 
 func _pop() -> void:
-	scale = Vector2(0.9, 0.9)
-	var tw := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(self, "scale", Vector2.ONE, 0.35)
+	rect_scale = Vector2(0.9, 0.9)
+	if _tween != null and is_instance_valid(_tween):
+		_tween.stop_all()
+		_tween.queue_free()
+	_tween = Anim.scale_to(self, Vector2(0.9, 0.9), Vector2.ONE, 0.35)
 
 
 func _draw_dot() -> void:
-	var p := _player()
-	var center := Vector2(_dot.size.x / 2, _dot.size.y / 2)
+	var p = _player()
+	var center := Vector2(_dot.rect_size.x / 2, _dot.rect_size.y / 2)
 	var col: Color = PlayerManager.COLORS[index]
 	if p == null or not p.is_connected_now():
-		col = col.lerp(Color("d6dce2"), 0.75)
+		col = col.linear_interpolate(Color("d6dce2"), 0.75)
 	# Bola con brillo: base, sombra inferior y reflejo superior.
 	_dot.draw_circle(center + Vector2(0, 3), 34, WiiTheme.SHADOW)
 	_dot.draw_circle(center, 34, col)
 	_dot.draw_circle(center + Vector2(-9, -11), 13, Color(1, 1, 1, 0.35))
-	var f := get_theme_default_font()
+	var f := Fonts.get_font(800, 34)
 	var num := str(index + 1)
-	var fs := 34
-	var tsize := f.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var tsize := f.get_string_size(num)
 	_dot.draw_string(f, center + Vector2(-tsize.x / 2, tsize.y * 0.32), num,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+			Color(1, 1, 1, 1))
 
 
 static func battery_text(b: int) -> String:

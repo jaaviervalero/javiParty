@@ -11,10 +11,10 @@ const GAP_SEC := 1.1
 const START_STEPS := 3
 
 ## 0 arriba, 1 derecha, 2 abajo, 3 izquierda. Tonos pastel, distintos de los jugadores.
-const PETAL_COLORS: Array[Color] = [
+const PETAL_COLORS = [
 	Color("9ad4f0"), Color("ffc98f"), Color("f6a9c9"), Color("a9e0a4"),
 ]
-const DIRS: Array[int] = [Pad.UP, Pad.RIGHT, Pad.DOWN, Pad.LEFT]
+const DIRS = [Pad.UP, Pad.RIGHT, Pad.DOWN, Pad.LEFT]
 const DIR_VECS := [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]
 # Ambiente: pequeño teatro con telones pastel, tablas claras y foco suave.
 const STAGE_TOP := Color("e9def9")
@@ -37,12 +37,12 @@ class MemPlayer:
 	var done_round := false
 
 
-var _states: Array[MemPlayer] = []
-var _seq: Array[int] = []
-var _phase := Phase.GAP
+var _states: Array = []
+var _seq: Array = []
+var _phase: int = Phase.GAP
 var _phase_t := 0.0
 var _round := 0
-var _pressed_flash: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var _pressed_flash: Array = [0.0, 0.0, 0.0, 0.0]
 var _watch_played := -1
 var _amb_t := 0.0
 
@@ -92,7 +92,7 @@ func _next_round() -> void:
 func _game_process(delta: float) -> void:
 	_amb_t += delta
 	for d in 4:
-		_pressed_flash[d] = maxf(0.0, _pressed_flash[d] - delta)
+		_pressed_flash[d] = max(0.0, _pressed_flash[d] - delta)
 	match _phase:
 		Phase.WATCH:
 			_tick_watch(delta)
@@ -141,7 +141,7 @@ func _tick_repeat(delta: float) -> void:
 		for s in _states:
 			if s.alive and not s.done_round:
 				s.alive = false
-				Sfx.play("back", randf_range(0.9, 1.05))
+				Sfx.play("back", rand_range(0.9, 1.05))
 		var still := false
 		for s in _states:
 			if s.alive:
@@ -154,12 +154,12 @@ func _tick_repeat(delta: float) -> void:
 
 
 func _try_input(s: MemPlayer) -> void:
-	var expected := _seq[s.progress]
-	var pressed: Array[int] = []
+	var expected = _seq[s.progress]
+	var pressed: Array = []
 	for d in 4:
 		if s.player.just_pressed(DIRS[d]):
 			pressed.append(d)
-	if pressed.is_empty():
+	if pressed.empty():
 		return
 	if expected in pressed:
 		_pressed_flash[expected] = 0.22
@@ -184,11 +184,11 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.arena_frame(ci, ARENA, STAGE_TOP, STAGE_BOTTOM)
 	var floor_y := ARENA.end.y - 116.0
 	# Suelo de tablas claras.
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		Vector2(ARENA.position.x, floor_y), Vector2(ARENA.end.x, floor_y),
 		ARENA.end, Vector2(ARENA.position.x, ARENA.end.y)]), clip, FLOOR)
 	for i in 5:
-		var ly := floor_y + 22.0 + i * 23.0
+		var ly = floor_y + 22.0 + i * 23.0
 		ci.draw_line(Vector2(ARENA.position.x + 30, ly), Vector2(ARENA.end.x - 30, ly),
 				Color(FLOOR_DARK, 0.7), 2.0, true)
 	var px := ARENA.position.x + 96.0
@@ -204,7 +204,7 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	_draw_side_curtain(ci, clip, ARENA.end.x - 150.0, floor_y)
 	# Guardamalleta superior ondulada, muy clara para que el texto de fase se lea.
 	var val_h := 34.0
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		ARENA.position, Vector2(ARENA.end.x, ARENA.position.y),
 		Vector2(ARENA.end.x, ARENA.position.y + val_h),
 		Vector2(ARENA.position.x, ARENA.position.y + val_h)]), clip, Color("f9e4ec"))
@@ -217,14 +217,14 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.arena_border(ci, ARENA)
 
 
-func _draw_side_curtain(ci: CanvasItem, clip: PackedVector2Array, x: float, floor_y: float) -> void:
+func _draw_side_curtain(ci: CanvasItem, clip: PoolVector2Array, x: float, floor_y: float) -> void:
 	var w := 150.0
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		Vector2(x, ARENA.position.y), Vector2(x + w, ARENA.position.y),
 		Vector2(x + w, floor_y), Vector2(x, floor_y)]), clip, CURTAIN)
 	for i in 4:
-		var fx := x + 14.0 + i * 36.0
-		DrawKit.clipped_polygon(ci, PackedVector2Array([
+		var fx = x + 14.0 + i * 36.0
+		DrawKit.clipped_polygon(ci, PoolVector2Array([
 			Vector2(fx, ARENA.position.y), Vector2(fx + 15.0, ARENA.position.y),
 			Vector2(fx + 15.0, floor_y), Vector2(fx, floor_y)]), clip,
 			CURTAIN_DARK if i % 2 == 0 else CURTAIN_LIGHT)
@@ -235,7 +235,7 @@ func _draw() -> void:
 	# Motas doradas flotando despacio en el haz de luz.
 	for i in 4:
 		var mt := fmod(_amb_t * 0.3 + i * 0.27, 1.0)
-		var mx := 640.0 + sin(_amb_t * 0.8 + i * 1.7) * (70.0 + i * 22.0)
+		var mx = 640.0 + sin(_amb_t * 0.8 + i * 1.7) * (70.0 + i * 22.0)
 		var my := 552.0 - mt * 200.0
 		draw_circle(Vector2(mx, my), 3.0 + float(i % 2), Color(MOTE, 0.45 * sin(mt * PI)))
 	var center := Vector2(640, 396)
@@ -261,7 +261,7 @@ func _draw() -> void:
 func _lit_index() -> int:
 	if _phase == Phase.GAP:
 		return -1
-	if _seq.is_empty():
+	if _seq.empty():
 		return -1
 	if _phase == Phase.WATCH:
 		var idx := int(_phase_t / STEP_SEC)
@@ -281,7 +281,7 @@ func _draw_petal(center: Vector2, d: int, is_lit: bool, flash: bool) -> void:
 	var pos: Vector2 = center + off
 	var base: Color = PETAL_COLORS[d]
 	var active := is_lit or flash
-	var col := base if active else base.lerp(Color.WHITE, 0.42)
+	var col := base if active else base.linear_interpolate(Color(1, 1, 1, 1), 0.42)
 	draw_circle(pos + Vector2(0, 8), PETAL_RADIUS + 4.0, WiiTheme.SHADOW)
 	if active:
 		# Encendido claro: halo y botón saturado, imposible confundirlo.
@@ -296,41 +296,41 @@ func _draw_petal(center: Vector2, d: int, is_lit: bool, flash: bool) -> void:
 	# que se lea tanto apagado como encendido.
 	var dir: Vector2 = DIR_VECS[d]
 	var tip := pos + dir * PETAL_RADIUS * 0.5
-	var side := dir.orthogonal() * PETAL_RADIUS * 0.22
-	var pts := PackedVector2Array([tip, pos + dir * PETAL_RADIUS * 0.08 + side,
+	var side := dir.tangent() * PETAL_RADIUS * 0.22
+	var pts := PoolVector2Array([tip, pos + dir * PETAL_RADIUS * 0.08 + side,
 			pos + dir * PETAL_RADIUS * 0.08 - side])
 	draw_colored_polygon(pts, Color(base.darkened(0.32), 0.92))
 
 
 func _draw_players_row() -> void:
-	var n := maxi(1, _states.size())
+	var n := max(1, _states.size())
 	var slot_w := ARENA.size.x / float(n)
 	var spacing := 16.0
-	if not _seq.is_empty():
-		spacing = minf(16.0, 210.0 / float(_seq.size()))
+	if not _seq.empty():
+		spacing = min(16.0, 210.0 / float(_seq.size()))
 	var y := ARENA.end.y - 46.0
 	for i in _states.size():
-		var s := _states[i]
-		var p := s.player
+		var s = _states[i]
+		var p = s.player
 		var cx := ARENA.position.x + slot_w * (float(i) + 0.5)
 		var dots_w := float(_seq.size()) * spacing
 		var total := 40.0 + 10.0 + dots_w
 		var x := cx - total * 0.5
-		var col := p.color
+		var col = p.color
 		if not s.alive:
 			col = Color("b8c0c8")
 		draw_circle(Vector2(x + 20, y + 5), 20, WiiTheme.SHADOW)
 		draw_circle(Vector2(x + 20, y), 20, col)
 		draw_circle(Vector2(x + 13, y - 6), 7, Color(1, 1, 1, 0.4))
-		draw_text_centered(str(p.index + 1), Vector2(x + 20, y), 18, Color.WHITE)
+		draw_text_centered(str(p.index + 1), Vector2(x + 20, y), 18, Color(1, 1, 1, 1))
 		# Puntos de progreso.
 		for k in _seq.size():
 			var dot := Vector2(x + 50 + spacing * (float(k) + 0.5), y)
-			var done := s.progress > k
-			var dc := col.darkened(0.1) if done else Color("dde3e8")
+			var done = s.progress > k
+			var dc = col.darkened(0.1) if done else Color("dde3e8")
 			if not s.alive:
 				dc = Color("d4d9de") if not done else Color("b8c0c8")
-			draw_circle(dot, minf(5.0, spacing * 0.32), dc)
+			draw_circle(dot, min(5.0, spacing * 0.32), dc)
 		if s.done_round:
 			draw_arc(Vector2(x + 20, y), 27, 0, TAU, 24, Color("ffd34d"), 4.0, true)
 		if not s.alive:

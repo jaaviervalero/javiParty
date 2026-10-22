@@ -14,3 +14,6 @@ tools/probe_motion.json
 
 # Exportaciones
 build/
+
+# Godot 3 (derivados; se regeneran al abrir el editor)
+.import/

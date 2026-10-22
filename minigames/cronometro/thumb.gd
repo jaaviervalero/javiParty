@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Para el reloj" para el selector: reloj de bolsillo en el taller.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:
@@ -30,10 +30,10 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 
 static func _gear(ci: CanvasItem, center: Vector2, rad: float, teeth: int, angle: float,
 		col: Color) -> void:
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	for i in teeth * 2:
 		var a := angle + TAU * float(i) / float(teeth * 2)
-		pts.append(center + Vector2.from_angle(a) * (rad if i % 2 == 0 else rad * 0.78))
+		pts.append(center + Vector2(cos(a), sin(a)) * (rad if i % 2 == 0 else rad * 0.78))
 	ci.draw_colored_polygon(pts, col)
 	ci.draw_circle(center, rad * 0.55, col.darkened(0.05))
-	ci.draw_circle(center, rad * 0.22, Color.WHITE)
+	ci.draw_circle(center, rad * 0.22, Color(1, 1, 1, 1))

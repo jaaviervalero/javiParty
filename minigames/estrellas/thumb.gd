@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Estrellas" para el selector: jardín al anochecer con estrellas y bolas.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:

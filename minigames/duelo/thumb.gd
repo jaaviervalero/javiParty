@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "¡Desenfunda!" para el selector: oeste al mediodía y señal.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:

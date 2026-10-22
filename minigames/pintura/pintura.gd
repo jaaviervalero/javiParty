@@ -48,15 +48,15 @@ class Ball:
 class Powerup:
 	var kind: int
 	var pos: Vector2
-	var cell: Vector2i
+	var cell: Vector2
 	var age := 0.0
 
 
-var _balls: Array[Ball] = []
-var _powerups: Array[Powerup] = []
-var _owner := PackedInt32Array()   # 0 = vacía; si no, index del jugador + 1
+var _balls: Array = []
+var _powerups: Array = []
+var _owner := PoolIntArray()   # 0 = vacía; si no, index del jugador + 1
 var _count := [0, 0, 0, 0]
-var _colors: Array[Color] = []
+var _colors: Array = []
 var _waves: Array = []             # [pos, t, radio_max, color]
 var _confetti: Array = []          # [pos, vel, color, vida]
 var _spawn_timer := POWERUP_INTERVAL
@@ -113,14 +113,14 @@ func _game_process(delta: float) -> void:
 
 
 func _update_ball(b: Ball, delta: float) -> void:
-	b.brush_left = maxf(0.0, b.brush_left - delta)
-	b.speed_left = maxf(0.0, b.speed_left - delta)
-	b.squash = lerpf(b.squash, 1.0, minf(1.0, delta * 10.0))
+	b.brush_left = max(0.0, b.brush_left - delta)
+	b.speed_left = max(0.0, b.speed_left - delta)
+	b.squash = lerp(b.squash, 1.0, min(1.0, delta * 10.0))
 	var p := b.player
 	var dir := p.stick() if p.stick() != Vector2.ZERO else p.dpad().normalized()
 	var top := MAX_SPEED * (SPEED_MULT if b.speed_left > 0.0 else 1.0)
 	if dir != Vector2.ZERO:
-		b.vel = b.vel.lerp(dir.normalized() * top, 1.0 - exp(-STEER * delta))
+		b.vel = b.vel.linear_interpolate(dir.normalized() * top, 1.0 - exp(-STEER * delta))
 	else:
 		b.vel *= exp(-STEER * 0.6 * delta)
 	b.pos += b.vel * delta
@@ -131,19 +131,19 @@ func _bounce(b: Ball) -> void:
 	var r := _grid_rect().grow(-_ball_radius(b))
 	if b.pos.x < r.position.x:
 		b.pos.x = r.position.x
-		b.vel.x = absf(b.vel.x) * 0.7
+		b.vel.x = abs(b.vel.x) * 0.7
 		b.squash = 0.85
 	elif b.pos.x > r.end.x:
 		b.pos.x = r.end.x
-		b.vel.x = -absf(b.vel.x) * 0.7
+		b.vel.x = -abs(b.vel.x) * 0.7
 		b.squash = 0.85
 	if b.pos.y < r.position.y:
 		b.pos.y = r.position.y
-		b.vel.y = absf(b.vel.y) * 0.7
+		b.vel.y = abs(b.vel.y) * 0.7
 		b.squash = 0.85
 	elif b.pos.y > r.end.y:
 		b.pos.y = r.end.y
-		b.vel.y = -absf(b.vel.y) * 0.7
+		b.vel.y = -abs(b.vel.y) * 0.7
 		b.squash = 0.85
 
 
@@ -154,18 +154,18 @@ func _ball_radius(b: Ball) -> float:
 func _collide_balls() -> void:
 	for i in _balls.size():
 		for j in range(i + 1, _balls.size()):
-			var a := _balls[i]
-			var b := _balls[j]
-			var d := b.pos - a.pos
-			var dist := d.length()
+			var a = _balls[i]
+			var b = _balls[j]
+			var d = b.pos - a.pos
+			var dist = d.length()
 			var min_dist := _ball_radius(a) + _ball_radius(b)
 			if dist >= min_dist or dist < 0.01:
 				continue
-			var n := d / dist
-			var overlap := min_dist - dist
+			var n = d / dist
+			var overlap = min_dist - dist
 			a.pos -= n * overlap * 0.5
 			b.pos += n * overlap * 0.5
-			var rel := (b.vel - a.vel).dot(n)
+			var rel = (b.vel - a.vel).dot(n)
 			if rel < 0.0:
 				a.vel += n * rel * 0.9
 				b.vel -= n * rel * 0.9
@@ -178,12 +178,12 @@ func _collide_balls() -> void:
 func _spawn_powerup() -> void:
 	var o := _grid_origin()
 	for _attempt in 40:
-		var cell := Vector2i(randi_range(0, COLS - 1), randi_range(0, ROWS - 1))
+		var cell := Vector2(randi() % COLS, randi() % ROWS)
 		var pos := o + Vector2((cell.x + 0.5) * CELL, (cell.y + 0.5) * CELL)
 		if not _spot_is_free(pos):
 			continue
 		var pu := Powerup.new()
-		pu.kind = randi_range(0, 2)
+		pu.kind = randi() % 3
 		pu.pos = pos
 		pu.cell = cell
 		_powerups.append(pu)
@@ -202,10 +202,10 @@ func _spot_is_free(pos: Vector2) -> bool:
 
 func _pickups() -> void:
 	for i in range(_powerups.size() - 1, -1, -1):
-		var pu := _powerups[i]
+		var pu = _powerups[i]
 		for b in _balls:
 			if b.pos.distance_to(pu.pos) <= _ball_radius(b) + POWERUP_RADIUS:
-				_powerups.remove_at(i)
+				_powerups.remove(i)
 				_apply_powerup(b, pu)
 				break
 
@@ -218,12 +218,12 @@ func _apply_powerup(b: Ball, pu: Powerup) -> void:
 			b.brush_left = BRUSH_TIME
 			b.squash = 1.25
 			_burst(pu.pos, BRUSH_COLOR, 14)
-			Sfx.play("star", randf_range(0.95, 1.1))
+			Sfx.play("star", rand_range(0.95, 1.1))
 		SPEED:
 			b.speed_left = SPEED_TIME
 			b.squash = 1.25
 			_burst(pu.pos, SPEED_COLOR, 14)
-			Sfx.play("dash", randf_range(1.0, 1.15))
+			Sfx.play("dash", rand_range(1.0, 1.15))
 
 
 func _explode(b: Ball) -> void:
@@ -232,7 +232,7 @@ func _explode(b: Ball) -> void:
 	_waves.append([b.pos, 0.0, BOMB_CELLS * CELL, b.player.color])
 	_burst(b.pos, b.player.color, 28)
 	b.squash = 1.4
-	Sfx.play("wave", randf_range(0.9, 1.05))
+	Sfx.play("wave", rand_range(0.9, 1.05))
 
 
 # --- Pintura ---
@@ -269,14 +269,14 @@ func _grid_rect() -> Rect2:
 
 func _paint(center: Vector2, radius: float, owner: int) -> void:
 	var o := _grid_origin()
-	var c0 := Vector2i(int(floor((center.x - radius - o.x) / CELL)),
+	var c0 := Vector2(int(floor((center.x - radius - o.x) / CELL)),
 			int(floor((center.y - radius - o.y) / CELL)))
-	var c1 := Vector2i(int(floor((center.x + radius - o.x) / CELL)),
+	var c1 := Vector2(int(floor((center.x + radius - o.x) / CELL)),
 			int(floor((center.y + radius - o.y) / CELL)))
-	c0.x = clampi(c0.x, 0, COLS - 1)
-	c0.y = clampi(c0.y, 0, ROWS - 1)
-	c1.x = clampi(c1.x, 0, COLS - 1)
-	c1.y = clampi(c1.y, 0, ROWS - 1)
+	c0.x = clamp(c0.x, 0, COLS - 1)
+	c0.y = clamp(c0.y, 0, ROWS - 1)
+	c1.x = clamp(c1.x, 0, COLS - 1)
+	c1.y = clamp(c1.y, 0, ROWS - 1)
 	for cy in range(c0.y, c1.y + 1):
 		for cx in range(c0.x, c1.x + 1):
 			var cc := o + Vector2((cx + 0.5) * CELL, (cy + 0.5) * CELL)
@@ -301,8 +301,8 @@ func _sync_scores() -> void:
 
 func _burst(at: Vector2, color: Color, n: int) -> void:
 	for i in n:
-		var v := Vector2.RIGHT.rotated(randf() * TAU) * randf_range(120.0, 420.0)
-		_confetti.append([at, v, color if i % 2 == 0 else Color.WHITE, randf_range(0.5, 0.9)])
+		var v := Vector2.RIGHT.rotated(randf() * TAU) * rand_range(120.0, 420.0)
+		_confetti.append([at, v, color if i % 2 == 0 else Color(1, 1, 1, 1), rand_range(0.5, 0.9)])
 
 
 func _update_effects(delta: float) -> void:
@@ -310,12 +310,20 @@ func _update_effects(delta: float) -> void:
 		pu.age += delta
 	for w in _waves:
 		w[1] += delta * 1.8
-	_waves = _waves.filter(func(w): return w[1] < 1.0)
+	var live_waves: Array = []
+	for w in _waves:
+		if w[1] < 1.0:
+			live_waves.append(w)
+	_waves = live_waves
 	for c in _confetti:
 		c[0] += c[1] * delta
 		c[1] = c[1] * exp(-3.0 * delta) + Vector2(0, 500) * delta
 		c[3] -= delta
-	_confetti = _confetti.filter(func(c): return c[3] > 0.0)
+	var live: Array = []
+	for c in _confetti:
+		if c[3] > 0.0:
+			live.append(c)
+	_confetti = live
 
 
 func _game_end() -> void:
@@ -332,16 +340,16 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.grass_tufts(ci, Vector2(24.0, 704.0), Vector2(1256.0, 704.0), 26, GARDEN_DARK, 5)
 	# Setos redondos en los bordes, lejos de las esquinas.
 	for i in 11:
-		var hx := 100.0 + i * 110.0
+		var hx = 100.0 + i * 110.0
 		ci.draw_circle(Vector2(hx, ARENA.end.y + 12.0), 24.0, HEDGE)
 		ci.draw_circle(Vector2(hx - 12.0, ARENA.end.y + 15.0), 15.0, HEDGE.lightened(0.08))
 	for i in 5:
-		var hy := 170.0 + i * 100.0
+		var hy = 170.0 + i * 100.0
 		ci.draw_circle(Vector2(ARENA.position.x - 10.0, hy), 20.0, HEDGE)
 		ci.draw_circle(Vector2(ARENA.end.x + 10.0, hy + 46.0), 20.0, HEDGE)
 	for i in 9:
 		DrawKit.flower(ci, Vector2(90.0 + i * 138.0, ARENA.end.y + 14.0), 4.5,
-				Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
+				Color(1, 1, 1, 1) if i % 2 == 0 else Color("ffd1e3"))
 	DrawKit.arena_frame(ci, ARENA, PATIO, PATIO_DARK)
 	_draw_patio(ci)
 	# Devuelve las esquinas redondeadas al tablero y cierra con el borde blanco.
@@ -361,8 +369,8 @@ func _draw_patio(ci: CanvasItem) -> void:
 			if (bx + by) % 4 != 0:
 				continue
 			var r := Rect2(o + Vector2(bx * CELL, by * CELL),
-					Vector2(CELL * 2.0, CELL * 2.0)).intersection(board)
-			if r.has_area():
+					Vector2(CELL * 2.0, CELL * 2.0)).clip(board)
+			if r.size.x > 0.0 and r.size.y > 0.0:
 				ci.draw_rect(r, PATIO_DARK)
 	# Junta sutil en vez de un borde por casilla: menos llamadas de dibujo.
 	var line := Color(0.35, 0.42, 0.48, 0.10)
@@ -387,7 +395,7 @@ func _draw() -> void:
 		_draw_ball(b)
 	for c in _confetti:
 		draw_rect(Rect2(c[0] - Vector2(4, 4), Vector2(8, 8)),
-				Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
+				Color(c[2], clamp(c[3] * 2.0, 0.0, 1.0)))
 
 
 ## Solo las casillas pintadas: el resto del patio ya está en el escenario.
@@ -415,7 +423,7 @@ func _draw_powerup(pu: Powerup) -> void:
 			kind = SPEED_COLOR
 	DrawKit.soft_shadow(self, pu.pos + Vector2(0, 18.0), r * 1.7)
 	draw_circle(c, r + 5.0, Color(kind, 0.18))
-	draw_circle(c, r, Color.WHITE)
+	draw_circle(c, r, Color(1, 1, 1, 1))
 	draw_circle(c + Vector2(0, r * 0.22), r * 0.78, Color(kind, 0.14))
 	draw_arc(c, r, 0.0, TAU, 32, kind, 3.5, true)
 	# Brillo glossy arriba a la izquierda.
@@ -441,18 +449,18 @@ func _draw_icon_brush(c: Vector2) -> void:
 	draw_set_transform(c, -0.7, Vector2.ONE)
 	draw_rect(Rect2(-3.0, -14.0, 6.0, 15.0), WiiTheme.ACCENT_DARK)
 	draw_rect(Rect2(-7.0, -1.0, 14.0, 4.0), WiiTheme.ACCENT_DARK)
-	var pts := PackedVector2Array([Vector2(-7, 3), Vector2(7, 3), Vector2(5, 12), Vector2(-5, 12)])
+	var pts := PoolVector2Array([Vector2(-7, 3), Vector2(7, 3), Vector2(5, 12), Vector2(-5, 12)])
 	draw_colored_polygon(pts, WiiTheme.ACCENT)
-	draw_set_transform(Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_icon_bolt(c: Vector2) -> void:
-	var pts := PackedVector2Array([
+	var pts := PoolVector2Array([
 		c + Vector2(2, -14), c + Vector2(-9, 2), c + Vector2(-1, 2),
 		c + Vector2(-3, 14), c + Vector2(9, -3), c + Vector2(1, -3),
 	])
 	draw_colored_polygon(pts, Color("ffd34d"))
-	var outline := pts.duplicate()
+	var outline := PoolVector2Array(pts)
 	outline.append(pts[0])
 	draw_polyline(outline, WiiTheme.ACCENT_DARK, 2.5, true)
 
@@ -460,7 +468,7 @@ func _draw_icon_bolt(c: Vector2) -> void:
 func _draw_ball(b: Ball) -> void:
 	var col := b.player.color
 	if not b.player.is_connected_now():
-		col = col.lerp(Color("c8ced4"), 0.7)
+		col = col.linear_interpolate(Color("c8ced4"), 0.7)
 	var r := _ball_radius(b)
 	# Estela del rayo.
 	if b.speed_left > 0.0 and b.vel.length() > 40.0:
@@ -475,8 +483,8 @@ func _draw_ball(b: Ball) -> void:
 	draw_circle(Vector2.ZERO, r, col)
 	draw_circle(Vector2(0, r * 0.25), r * 0.75, col.darkened(0.08))
 	draw_circle(Vector2(-r * 0.3, -r * 0.35), r * 0.38, Color(1, 1, 1, 0.4))
-	draw_set_transform(Vector2.ZERO)
-	draw_text_centered(str(b.player.index + 1), b.pos, int(26.0 * r / BALL_RADIUS), Color.WHITE)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_text_centered(str(b.player.index + 1), b.pos, int(26.0 * r / BALL_RADIUS), Color(1, 1, 1, 1))
 	# Aros con el tiempo que le queda a cada efecto activo.
 	var ring := r + 8.0
 	if b.brush_left > 0.0:
@@ -488,5 +496,5 @@ func _draw_ball(b: Ball) -> void:
 
 func _draw_effect_ring(center: Vector2, radius: float, frac: float, color: Color) -> void:
 	draw_arc(center, radius, 0.0, TAU, 32, Color(color, 0.18), 5.0, true)
-	draw_arc(center, radius, -PI * 0.5, -PI * 0.5 + TAU * clampf(frac, 0.0, 1.0), 32,
+	draw_arc(center, radius, -PI * 0.5, -PI * 0.5 + TAU * clamp(frac, 0.0, 1.0), 32,
 			color, 5.0, true)

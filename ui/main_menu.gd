@@ -6,7 +6,7 @@ extends Control
 const SELECT_SCENE := "res://ui/minigame_select.tscn"
 const QR_TEXTURE := "res://assets/controller/javiparty_qr.png"
 
-var _cards: Array[PlayerCard] = []
+var _cards: Array = []
 var _status: Label
 var _clock: Label
 var _scan_btn: Button
@@ -21,15 +21,16 @@ var _refresh_timer := 0.0
 
 
 func _ready() -> void:
+	theme = WiiTheme.build()
 	PlayerManager.ui_navigation_enabled = true
 	for ip in Settings.manual_servers:
 		DSUClient.add_server(ip)
 	NetworkScanner.start()
 	_build()
-	PlayerManager.player_joined.connect(_on_player_event.bind("join"))
-	PlayerManager.player_reconnected.connect(_on_player_event.bind("join"))
-	PlayerManager.player_left.connect(_on_player_event.bind("leave"))
-	_first_btn.grab_focus.call_deferred()
+	PlayerManager.connect("player_joined", self, "_on_player_event", ["join"])
+	PlayerManager.connect("player_reconnected", self, "_on_player_event", ["join"])
+	PlayerManager.connect("player_left", self, "_on_player_event", ["leave"])
+	_first_btn.call_deferred("grab_focus")
 
 
 func _exit_tree() -> void:
@@ -40,30 +41,31 @@ func _build() -> void:
 	add_child(WiiBackground.new())
 
 	var root := VBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.offset_left = 56
-	root.offset_right = -56
-	root.offset_top = 36
-	root.offset_bottom = -40
-	root.add_theme_constant_override("separation", 18)
+	root.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+	root.margin_left = 56
+	root.margin_right = -56
+	root.margin_top = 36
+	root.margin_bottom = -40
+	root.add_constant_override("separation", 18)
 	add_child(root)
 
 	var title_row := HBoxContainer.new()
-	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	title_row.add_theme_constant_override("separation", 0)
+	title_row.alignment = BoxContainer.ALIGN_CENTER
+	title_row.add_constant_override("separation", 0)
 	root.add_child(title_row)
 	title_row.add_child(_title_label("javi", WiiTheme.TEXT))
 	title_row.add_child(_title_label("Party", WiiTheme.ACCENT))
 
 	var tagline := Label.new()
 	tagline.text = "TAGLINE"
-	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tagline.add_theme_color_override("font_color", WiiTheme.TEXT_SOFT)
+	tagline.align = Label.ALIGN_CENTER
+	tagline.add_color_override("font_color", WiiTheme.TEXT_SOFT)
+	tagline.add_font_override("font", Fonts.get_font(600, 22))
 	root.add_child(tagline)
 
 	var cards_row := HBoxContainer.new()
-	cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	cards_row.add_theme_constant_override("separation", 22)
+	cards_row.alignment = BoxContainer.ALIGN_CENTER
+	cards_row.add_constant_override("separation", 22)
 	cards_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(cards_row)
 	for i in PlayerManager.MAX_PLAYERS:
@@ -73,31 +75,32 @@ func _build() -> void:
 		_cards.append(card)
 
 	_status = Label.new()
-	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.custom_minimum_size = Vector2(0, 56)
-	_status.add_theme_font_size_override("font_size", 18)
+	_status.align = Label.ALIGN_CENTER
+	_status.autowrap = true
+	_status.rect_min_size = Vector2(0, 56)
+	_status.add_font_override("font", Fonts.get_font(600, 18))
 	root.add_child(_status)
 
 	var buttons := HBoxContainer.new()
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 10)
+	buttons.alignment = BoxContainer.ALIGN_CENTER
+	buttons.add_constant_override("separation", 10)
 	root.add_child(buttons)
-	_first_btn = _button(buttons, "BTN_PLAY", _on_play)
-	_scan_btn = _button(buttons, "BTN_SCAN_ON", _on_toggle_scan)
-	_qr_btn = _button(buttons, "BTN_QR", _open_qr_dialog)
-	_button(buttons, "BTN_MANUAL_IP", _open_ip_dialog)
-	_lang_btn = _button(buttons, "BTN_LANGUAGE", _on_language)
-	_button(buttons, "BTN_DEBUG", DebugOverlay.toggle)
+	_first_btn = _button(buttons, "BTN_PLAY", "_on_play")
+	_scan_btn = _button(buttons, "BTN_SCAN_ON", "_on_toggle_scan")
+	_qr_btn = _button(buttons, "BTN_QR", "_open_qr_dialog")
+	_button(buttons, "BTN_MANUAL_IP", "_open_ip_dialog")
+	_lang_btn = _button(buttons, "BTN_LANGUAGE", "_on_language")
+	_button(buttons, "BTN_DEBUG", "toggle_debug_overlay")
 
 	_clock = Label.new()
-	_clock.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_clock.offset_left = -130
-	_clock.offset_top = -44
-	_clock.offset_right = -24
-	_clock.offset_bottom = -10
-	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_clock.add_theme_color_override("font_color", WiiTheme.TEXT_SOFT)
+	_clock.set_anchors_and_margins_preset(Control.PRESET_BOTTOM_RIGHT)
+	_clock.margin_left = -130
+	_clock.margin_top = -44
+	_clock.margin_right = -24
+	_clock.margin_bottom = -10
+	_clock.align = Label.ALIGN_RIGHT
+	_clock.add_color_override("font_color", WiiTheme.TEXT_SOFT)
+	_clock.add_font_override("font", Fonts.get_font(600, 20))
 	add_child(_clock)
 
 	_build_ip_dialog()
@@ -107,118 +110,130 @@ func _build() -> void:
 func _title_label(text: String, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.add_theme_font_override("font", WiiTheme.font(800))
-	l.add_theme_font_size_override("font_size", 72)
-	l.add_theme_color_override("font_color", color)
+	l.add_font_override("font", Fonts.get_font(800, 72))
+	l.add_color_override("font_color", color)
 	return l
 
 
-func _button(parent: Node, text: String, cb: Callable) -> Button:
+## Los botones se conectan por nombre de método (en 3.6 no hay lambdas).
+func _button(parent: Node, text: String, method: String) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.add_theme_font_size_override("font_size", 19)
-	b.pressed.connect(func(): Sfx.play("accept"); cb.call())
-	b.focus_entered.connect(Sfx.play.bind("move"))
+	b.add_font_override("font", Fonts.get_font(700, 19))
+	b.connect("pressed", self, "_on_button_pressed", [method])
+	b.connect("focus_entered", Sfx, "play", ["move"])
 	parent.add_child(b)
 	return b
 
 
+func _on_button_pressed(method: String) -> void:
+	Sfx.play("accept")
+	call(method)
+
+
+func toggle_debug_overlay() -> void:
+	DebugOverlay.toggle()
+
+
 func _build_ip_dialog() -> void:
 	_ip_dialog = Control.new()
-	_ip_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_ip_dialog.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_ip_dialog.visible = false
 	add_child(_ip_dialog)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0.85, 0.9, 0.94, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_ip_dialog.add_child(dim)
 
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_ip_dialog.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(520, 0)
+	panel.rect_min_size = Vector2(520, 0)
 	center.add_child(panel)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 14)
+	box.add_constant_override("separation", 14)
 	panel.add_child(box)
 
 	var title := Label.new()
 	title.text = "MANUAL_IP_TITLE"
-	title.add_theme_font_size_override("font_size", 30)
+	title.add_font_override("font", Fonts.get_font(800, 30))
 	box.add_child(title)
 	var hint := Label.new()
 	hint.text = "MANUAL_IP_HINT"
-	hint.add_theme_font_size_override("font_size", 17)
-	hint.add_theme_color_override("font_color", WiiTheme.TEXT_SOFT)
+	hint.add_font_override("font", Fonts.get_font(600, 17))
+	hint.add_color_override("font_color", WiiTheme.TEXT_SOFT)
 	box.add_child(hint)
 	_ip_edit = LineEdit.new()
 	_ip_edit.placeholder_text = "192.168.1.50"
 	_ip_edit.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER_DECIMAL
-	_ip_edit.text_submitted.connect(func(_t): _on_connect_ip())
+	_ip_edit.connect("text_submitted", self, "_on_ip_submitted")
 	box.add_child(_ip_edit)
 	_ip_error = Label.new()
-	_ip_error.add_theme_color_override("font_color", Color("d9534f"))
-	_ip_error.add_theme_font_size_override("font_size", 16)
+	_ip_error.add_color_override("font_color", Color("d9534f"))
+	_ip_error.add_font_override("font", Fonts.get_font(600, 16))
 	box.add_child(_ip_error)
 	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_END
-	row.add_theme_constant_override("separation", 12)
+	row.alignment = BoxContainer.ALIGN_END
+	row.add_constant_override("separation", 12)
 	box.add_child(row)
-	_button(row, "BTN_CANCEL", _close_ip_dialog)
-	_button(row, "BTN_CONNECT", _on_connect_ip)
+	_button(row, "BTN_CANCEL", "_close_ip_dialog")
+	_button(row, "BTN_CONNECT", "_on_connect_ip")
+
+
+func _on_ip_submitted(_text: String) -> void:
+	_on_connect_ip()
 
 
 ## Diálogo con el QR del mando de javiParty para escanearlo con DSU Controller.
 func _build_qr_dialog() -> void:
 	_qr_dialog = Control.new()
-	_qr_dialog.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_qr_dialog.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_qr_dialog.visible = false
 	add_child(_qr_dialog)
 	var dim := ColorRect.new()
 	dim.color = Color(0.85, 0.9, 0.94, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_qr_dialog.add_child(dim)
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_qr_dialog.add_child(center)
 	var panel := PanelContainer.new()
 	center.add_child(panel)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 28)
+	row.add_constant_override("separation", 28)
 	panel.add_child(row)
 	var qr := TextureRect.new()
 	qr.texture = load(QR_TEXTURE)
-	qr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # QR nítido al escalar
-	qr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	qr.expand = true
 	qr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	qr.custom_minimum_size = Vector2(400, 400)
+	qr.rect_min_size = Vector2(400, 400)
 	row.add_child(qr)
 	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.custom_minimum_size = Vector2(380, 0)
-	box.add_theme_constant_override("separation", 16)
+	box.alignment = BoxContainer.ALIGN_CENTER
+	box.rect_min_size = Vector2(380, 0)
+	box.add_constant_override("separation", 16)
 	row.add_child(box)
 	var title := Label.new()
 	title.text = "QR_TITLE"
-	title.add_theme_font_size_override("font_size", 32)
+	title.add_font_override("font", Fonts.get_font(800, 32))
 	box.add_child(title)
 	var steps := Label.new()
 	steps.text = "QR_STEPS"
-	steps.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	steps.add_theme_font_size_override("font_size", 19)
-	steps.add_theme_color_override("font_color", WiiTheme.TEXT_SOFT)
+	steps.autowrap = true
+	steps.add_font_override("font", Fonts.get_font(600, 19))
+	steps.add_color_override("font_color", WiiTheme.TEXT_SOFT)
 	box.add_child(steps)
 	var close_row := HBoxContainer.new()
 	box.add_child(close_row)
-	_qr_dialog.set_meta("close", _button(close_row, "BTN_CLOSE", _close_qr_dialog))
+	_qr_dialog.set_meta("close", _button(close_row, "BTN_CLOSE", "_close_qr_dialog"))
 
 
 func _open_qr_dialog() -> void:
 	_qr_dialog.visible = true
-	(_qr_dialog.get_meta("close") as Button).grab_focus()
+	var close: Button = _qr_dialog.get_meta("close")
+	close.grab_focus()
 
 
 func _close_qr_dialog() -> void:
@@ -238,7 +253,7 @@ func _close_ip_dialog() -> void:
 
 
 func _on_connect_ip() -> void:
-	var ip := _ip_edit.text.strip_edges()
+	var ip: String = _ip_edit.text.strip_edges()
 	if not LAN.is_ipv4(ip):
 		_ip_error.text = tr("INVALID_IP")
 		Sfx.play("back")
@@ -252,15 +267,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and _ip_dialog.visible:
 		Sfx.play("back")
 		_close_ip_dialog()
-		get_viewport().set_input_as_handled()
+		get_tree().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel") and _qr_dialog.visible:
 		Sfx.play("back")
 		_close_qr_dialog()
-		get_viewport().set_input_as_handled()
+		get_tree().set_input_as_handled()
 
 
 func _on_play() -> void:
-	get_tree().change_scene_to_file(SELECT_SCENE)
+	get_tree().change_scene(SELECT_SCENE)
 
 
 func _on_toggle_scan() -> void:
@@ -274,7 +289,7 @@ func _on_language() -> void:
 	Settings.cycle_locale()
 
 
-func _on_player_event(_p: Player, sound: String) -> void:
+func _on_player_event(_p, sound: String) -> void:
 	Sfx.play(sound)
 	for c in _cards:
 		c.refresh()
@@ -288,16 +303,19 @@ func _process(delta: float) -> void:
 	for c in _cards:
 		c.refresh()
 	_scan_btn.text = "BTN_SCAN_ON" if NetworkScanner.active else "BTN_SCAN_OFF"
-	_clock.text = Time.get_time_string_from_system().substr(0, 5)
+	var t := OS.get_time()
+	_clock.text = "%02d:%02d" % [t.hour, t.minute]
 	_status.text = _status_text()
 
 
 func _status_text() -> String:
 	if not NetworkScanner.active:
 		return tr("SCAN_IDLE")
-	if NetworkScanner.sweeps > 0 and NetworkScanner.subnets.is_empty():
+	if NetworkScanner.sweeps > 0 and NetworkScanner.subnets.empty():
 		return tr("NO_NETWORK")
 	if NetworkScanner.should_warn():
 		return tr("NOTHING_FOUND")
-	var nets := ", ".join(Array(NetworkScanner.subnets).map(func(s): return s + "x"))
-	return tr("SCANNING") % nets + "\n" + tr("HOW_TO_CONNECT")
+	var nets := PoolStringArray()
+	for s in NetworkScanner.subnets:
+		nets.append(s + "x")
+	return tr("SCANNING") % ", ".join(nets) + "\n" + tr("HOW_TO_CONNECT")

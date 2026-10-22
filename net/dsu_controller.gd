@@ -1,5 +1,5 @@
 class_name DSUController
-extends RefCounted
+extends Reference
 ## Estado crudo de un mando DSU: un par (servidor IP:puerto, slot).
 ## Lo crea y actualiza DSUClient; el resto del juego solo lo lee.
 
@@ -9,7 +9,7 @@ var slot: int
 var key: String  # "ip:puerto#slot", único por mando
 
 # Info del dispositivo (parte común de las respuestas)
-var mac := PackedByteArray([0, 0, 0, 0, 0, 0])
+var mac := PoolByteArray([0, 0, 0, 0, 0, 0])
 var model := 0       # 0 N/A, 1 sin giroscopio o parcial, 2 giroscopio completo
 var connection := 0  # 0 N/A, 1 USB, 2 Bluetooth
 var battery := 0
@@ -22,7 +22,7 @@ var subscribed_msec := 0
 var buttons := 0
 var left_stick := Vector2.ZERO
 var right_stick := Vector2.ZERO
-var analog := PackedByteArray()
+var analog := PoolByteArray()
 var touch1 := {}
 var touch2 := {}
 var accel := Vector3.ZERO  # g
@@ -88,8 +88,8 @@ func _update_stats(now_usec: int) -> void:
 		if dt < 1000.0:  # ignora huecos largos (reconexiones)
 			if interval_ms == 0.0:
 				interval_ms = dt
-			interval_ms = lerpf(interval_ms, dt, 0.05)
-			jitter_ms = lerpf(jitter_ms, absf(dt - interval_ms), 0.05)
+			interval_ms = lerp(interval_ms, dt, 0.05)
+			jitter_ms = lerp(jitter_ms, abs(dt - interval_ms), 0.05)
 	_last_rx_usec = now_usec
 
 	_pps_count += 1

@@ -1,17 +1,106 @@
 ; Engine configuration file.
-config_version=5
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=4
+
+_global_script_classes=[ {
+"base": "Reference",
+"class": "Anim",
+"language": "GDScript",
+"path": "res://core/anim.gd"
+}, {
+"base": "Reference",
+"class": "DSUController",
+"language": "GDScript",
+"path": "res://net/dsu_controller.gd"
+}, {
+"base": "Reference",
+"class": "DSUProtocol",
+"language": "GDScript",
+"path": "res://net/dsu_protocol.gd"
+}, {
+"base": "Reference",
+"class": "DrawKit",
+"language": "GDScript",
+"path": "res://core/draw_kit.gd"
+}, {
+"base": "Reference",
+"class": "LAN",
+"language": "GDScript",
+"path": "res://net/lan.gd"
+}, {
+"base": "Node2D",
+"class": "MinigameBase",
+"language": "GDScript",
+"path": "res://core/minigame_base.gd"
+}, {
+"base": "Reference",
+"class": "MinigameRegistry",
+"language": "GDScript",
+"path": "res://core/minigame_registry.gd"
+}, {
+"base": "Reference",
+"class": "Pad",
+"language": "GDScript",
+"path": "res://input/pad.gd"
+}, {
+"base": "Reference",
+"class": "Player",
+"language": "GDScript",
+"path": "res://core/player.gd"
+}, {
+"base": "PanelContainer",
+"class": "PlayerCard",
+"language": "GDScript",
+"path": "res://ui/player_card.gd"
+}, {
+"base": "Reference",
+"class": "Strings",
+"language": "GDScript",
+"path": "res://i18n/strings.gd"
+}, {
+"base": "Control",
+"class": "WiiBackground",
+"language": "GDScript",
+"path": "res://ui/wii_background.gd"
+}, {
+"base": "Reference",
+"class": "WiiTheme",
+"language": "GDScript",
+"path": "res://ui/wii_theme.gd"
+} ]
+_global_script_class_icons={
+"Anim": "",
+"DSUController": "",
+"DSUProtocol": "",
+"DrawKit": "",
+"LAN": "",
+"MinigameBase": "",
+"MinigameRegistry": "",
+"Pad": "",
+"Player": "",
+"PlayerCard": "",
+"Strings": "",
+"WiiBackground": "",
+"WiiTheme": ""
+}
 
 [application]
 
 config/name="javiParty"
 config/description="Party game de minijuegos para Android TV con móviles como mando (DSU)."
 run/main_scene="res://ui/main_menu.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 config/quit_on_go_back=false
 
 [autoload]
 
+Fonts="*res://core/fonts.gd"
 Settings="*res://core/settings.gd"
 Sfx="*res://core/sfx.gd"
 DSUClient="*res://net/dsu_client.gd"
@@ -22,20 +111,18 @@ DebugOverlay="*res://ui/debug_overlay.gd"
 
 [display]
 
-window/size/viewport_width=1280
-window/size/viewport_height=720
-window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+window/size/width=1280
+window/size/height=720
+window/size/test_width=1280
+window/size/test_height=720
 window/handheld/orientation=0
-
-[input_devices]
-
-pointing/emulate_touch_from_mouse=false
+window/stretch/mode="2d"
+window/stretch/aspect="keep"
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
-textures/vram_compression/import_etc2_astc=true
-environment/defaults/default_clear_color=Color(0.984, 0.988, 0.992, 1)
-anti_aliasing/quality/msaa_2d=0
+quality/driver/driver_name="GLES2"
+environment/default_clear_color=Color( 0.984314, 0.988235, 0.992157, 1 )
+textures/vram_compression/import_etc=true
+textures/vram_compression/import_etc2=false
+quality/2d/use_pixel_snap=false

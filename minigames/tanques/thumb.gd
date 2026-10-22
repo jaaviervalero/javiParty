@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Tanquecitos" para el selector: cajón de arena y dos tanques.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:

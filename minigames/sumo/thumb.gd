@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Sumo de bolas": plataforma flotante sobre el mar de nubes.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:
@@ -17,7 +17,7 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	ci.draw_arc(c, pr * 0.62, 0.0, TAU, 32, Color(DrawKit.WOOD_DARK, 0.2), 2.0, true)
 	ci.draw_arc(c, pr * 0.32, 0.0, TAU, 32, Color(DrawKit.WOOD_DARK, 0.2), 2.0, true)
 	DrawKit.ellipse(ci, c + Vector2(-14, -20), Vector2(22, 8), Color(1, 1, 1, 0.2))
-	ci.draw_arc(c, pr - 1.0, 0.0, TAU, 40, Color.WHITE, 4.0, true)
+	ci.draw_arc(c, pr - 1.0, 0.0, TAU, 40, Color(1, 1, 1, 1), 4.0, true)
 	# Dos bolas empujándose.
 	DrawKit.glossy_ball(ci, c + Vector2(-19, -7), 17.0, Color("2fa8e0"))
 	DrawKit.glossy_ball(ci, c + Vector2(20, 4), 17.0, Color("ec5a5a"))

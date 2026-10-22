@@ -13,7 +13,7 @@ extends Node2D
 ## _game_start, _game_process, _game_end). No debe definir _ready/_process/_input.
 ## Normas completas: docs/MINIJUEGOS.md
 
-signal finished(placements: Array)
+signal finished(placements)
 
 enum State { INTRO, COUNTDOWN, PLAYING, RESULTS }
 
@@ -22,9 +22,6 @@ const RESULTS_AUTOCONTINUE_SEC := 12.0
 const HUD_HEIGHT := 84.0
 ## Zona de juego por defecto (debajo del HUD, con margen).
 const ARENA := Rect2(32, 96, 1216, 600)
-
-## Lo activa el test automático: al terminar no cambia de escena.
-static var headless_test := false
 
 # --- Configuración (rellenar en _configure) ---
 var title := {"es": "", "en": ""}
@@ -44,9 +41,9 @@ var show_scores := true
 var use_default_background := true
 
 # --- Estado (leer desde el juego) ---
-var players: Array[Player] = []
+var players: Array = []
 var scores := {}  # player.index -> número
-var state := State.INTRO
+var state: int = State.INTRO
 var time_left := 0.0
 var elapsed := 0.0  # segundos jugados (solo cuenta en PLAYING)
 var paused := false
@@ -54,8 +51,6 @@ var paused := false
 var _hud: CanvasLayer
 var _overlay: Control
 var _timer_label: Label
-var _font: Font
-var _font_bold: Font
 var _ready_flags := {}
 var _state_time := 0.0
 var _last_tick := -1
@@ -125,7 +120,7 @@ func get_score(p: Player):
 
 ## Vuelve a dibujar el escenario estático (si ha cambiado algo de él).
 func redraw_scenery() -> void:
-	_scenery.queue_redraw()
+	_scenery.update()
 
 
 ## Termina la partida ya (p. ej. solo queda uno vivo).
@@ -140,16 +135,16 @@ static func loc(d: Dictionary) -> String:
 	return d.get(TranslationServer.get_locale().substr(0, 2), d.get("es", ""))
 
 
-## Fuente del juego (Nunito). weight 400-900.
-func font(weight := 800) -> Font:
-	return _font_bold if weight >= 700 else _font
+## Fuente del juego (Nunito). En Godot 3.6 el tamaño va dentro de la fuente.
+func font(weight := 800, size := 24) -> DynamicFont:
+	return Fonts.get_font(weight, size)
 
 
 ## Dibuja un texto centrado en `center` (para usar dentro de _draw).
 func draw_text_centered(text: String, center: Vector2, size: int, color: Color, weight := 800) -> void:
-	var f := font(weight)
-	var ts := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size)
-	draw_string(f, center + Vector2(-ts.x / 2, ts.y * 0.32), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	var f := font(weight, size)
+	var ts := f.get_string_size(text)
+	draw_string(f, center + Vector2(-ts.x / 2, ts.y * 0.32), text, color)
 
 
 # =====================================================================
@@ -157,10 +152,8 @@ func draw_text_centered(text: String, center: Vector2, size: int, color: Color, 
 # =====================================================================
 
 func _ready() -> void:
-	_font = WiiTheme.font(600)
-	_font_bold = WiiTheme.font(800)
 	_configure()
-	duration = clampf(duration, 5.0, 90.0)
+	duration = clamp(duration, 5.0, 90.0)
 	players = PlayerManager.active_players()
 	for p in players:
 		scores[p.index] = 0
@@ -173,13 +166,17 @@ func _ready() -> void:
 	# Capa del escenario estático: hija que se pinta detrás del propio juego.
 	_scenery = Node2D.new()
 	_scenery.show_behind_parent = true
-	_scenery.draw.connect(func() -> void: _draw_scenery(_scenery))
+	_scenery.connect("draw", self, "_draw_scenery_bound", [_scenery])
 	add_child(_scenery)
 	_hud = CanvasLayer.new()
 	_hud.layer = 10
 	add_child(_hud)
 	_setup()
 	_enter_intro()
+
+
+func _draw_scenery_bound(ci: CanvasItem) -> void:
+	_draw_scenery(ci)
 
 
 func _exit_tree() -> void:
@@ -197,7 +194,7 @@ func _process(delta: float) -> void:
 			_process_playing(delta)
 		State.RESULTS:
 			_process_results()
-	queue_redraw()
+	update()
 	_hud_redraw()
 
 
@@ -234,8 +231,8 @@ func _enter_intro() -> void:
 	box.add_child(_label(loc(instructions), 24, WiiTheme.TEXT_SOFT, 600, true))
 	var grid := GridContainer.new()
 	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 18)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_constant_override("h_separation", 18)
+	grid.add_constant_override("v_separation", 10)
 	for c in controls:
 		grid.add_child(_control_pill(c[0]))
 		grid.add_child(_label(loc(c[1]), 22, WiiTheme.TEXT, 600))
@@ -243,8 +240,8 @@ func _enter_intro() -> void:
 	center.add_child(grid)
 	box.add_child(center)
 	var ready_row := HBoxContainer.new()
-	ready_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	ready_row.add_theme_constant_override("separation", 14)
+	ready_row.alignment = BoxContainer.ALIGN_CENTER
+	ready_row.add_constant_override("separation", 14)
 	ready_row.name = "ReadyRow"
 	box.add_child(ready_row)
 	box.add_child(_label(loc({"es": "Pulsad A cuando estéis listos", "en": "Press A when you're ready"}),
@@ -262,30 +259,30 @@ func _process_intro() -> void:
 	for p in players:
 		if p.is_connected_now() and not _ready_flags.has(p.index):
 			all_ready = false
-	if (all_ready and not _ready_flags.is_empty()) or _state_time > INTRO_AUTOSTART_SEC:
+	if (all_ready and not _ready_flags.empty()) or _state_time > INTRO_AUTOSTART_SEC:
 		_enter_countdown()
 
 
 func _refresh_ready_row() -> void:
 	if _overlay == null:
 		return
-	var row: HBoxContainer = _overlay.find_child("ReadyRow", true, false)
+	var row: HBoxContainer = _overlay.find_node("ReadyRow", true, false)
 	if row == null:
 		return
 	for c in row.get_children():
 		c.queue_free()
 	for p in players:
 		var dot := Panel.new()
-		dot.custom_minimum_size = Vector2(44, 44)
+		dot.rect_min_size = Vector2(44, 44)
 		var st := StyleBoxFlat.new()
 		st.set_corner_radius_all(22)
-		st.bg_color = p.color if _ready_flags.has(p.index) else p.color.lerp(Color.WHITE, 0.75)
+		st.bg_color = p.color if _ready_flags.has(p.index) else p.color.linear_interpolate(Color(1, 1, 1, 1), 0.75)
 		st.border_color = p.color
 		st.set_border_width_all(3)
-		dot.add_theme_stylebox_override("panel", st)
-		var l := _label(str(p.index + 1), 22, Color.WHITE, 800)
-		l.set_anchors_preset(Control.PRESET_FULL_RECT)
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		dot.add_stylebox_override("panel", st)
+		var l := _label(str(p.index + 1), 22, Color(1, 1, 1, 1), 800)
+		l.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+		l.valign = Label.VALIGN_CENTER
 		dot.add_child(l)
 		row.add_child(dot)
 
@@ -331,9 +328,9 @@ func _process_playing(delta: float) -> void:
 			elif p.just_pressed(Pad.B):
 				_quit_to_menu()
 		return
-	time_left = maxf(0.0, time_left - delta)
+	time_left = max(0.0, time_left - delta)
 	elapsed += delta
-	var secs := int(ceil(time_left))
+	var secs: int = int(ceil(time_left))
 	if secs <= 5 and secs != _last_tick and secs > 0:
 		_last_tick = secs
 		Sfx.play("move", 1.4)
@@ -378,13 +375,8 @@ func _enter_results() -> void:
 ## Clasificación: [{player, place (1..4), score}] ordenada por puesto.
 ## Los empates comparten puesto.
 func compute_placements() -> Array:
-	var sorted := players.duplicate()
-	sorted.sort_custom(func(a: Player, b: Player) -> bool:
-		var sa = get_score(a)
-		var sb = get_score(b)
-		if sa == sb:
-			return a.index < b.index
-		return sa < sb if lower_is_better else sa > sb)
+	var sorted: Array = players.duplicate()
+	sorted.sort_custom(self, "_compare_players")
 	var out: Array = []
 	var place := 0
 	var prev = null
@@ -396,6 +388,14 @@ func compute_placements() -> Array:
 		prev = s
 		out.append({"player": p, "place": place, "score": s})
 	return out
+
+
+func _compare_players(a: Player, b: Player) -> bool:
+	var sa = get_score(a)
+	var sb = get_score(b)
+	if sa == sb:
+		return a.index < b.index
+	return sa < sb if lower_is_better else sa > sb
 
 
 func _process_results() -> void:
@@ -414,13 +414,13 @@ func _continue() -> void:
 		return
 	state = State.INTRO  # evita dobles llamadas mientras cambia la escena
 	Sfx.play("accept")
-	finished.emit(_placements)
-	if not headless_test:
+	emit_signal("finished", _placements)
+	if not Settings.headless_test:
 		GameFlow.minigame_done(_placements)
 
 
 func _quit_to_menu() -> void:
-	if headless_test:
+	if Settings.headless_test:
 		return
 	Sfx.play("back")
 	GameFlow.quit_to_menu()
@@ -433,75 +433,86 @@ func _quit_to_menu() -> void:
 func _hud_redraw() -> void:
 	if not _hud.has_meta("canvas"):
 		var c := Control.new()
-		c.set_anchors_preset(Control.PRESET_FULL_RECT)
+		c.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		c.draw.connect(_draw_hud.bind(c))
+		c.connect("draw", self, "_draw_hud_bound", [c])
 		_hud.add_child(c)
 		_hud.move_child(c, 0)
 		_hud.set_meta("canvas", c)
-	(_hud.get_meta("canvas") as Control).queue_redraw()
+	var canvas: Control = _hud.get_meta("canvas")
+	canvas.update()
+
+
+func _draw_hud_bound(c: Control) -> void:
+	_draw_hud(c)
 
 
 func _draw_hud(c: Control) -> void:
 	if state == State.INTRO:
 		return
 	# Título a la izquierda
-	c.draw_string(_font_bold, Vector2(36, 58), loc(title), HORIZONTAL_ALIGNMENT_LEFT, 420, 30, WiiTheme.TEXT)
+	var f_title := Fonts.get_font(800, 30)
+	c.draw_string(f_title, Vector2(36, 58), loc(title), WiiTheme.TEXT, 420)
 	# Tiempo en el centro
-	var secs := int(ceil(time_left)) if state != State.COUNTDOWN else int(duration)
+	var secs: int = int(ceil(time_left)) if state != State.COUNTDOWN else int(duration)
 	var t_rect := Rect2(640 - 60, 22, 120, 52)
-	var st := WiiTheme.panel_style(26, Color("e25555") if secs <= 5 and state == State.PLAYING else WiiTheme.PANEL_BORDER)
+	var warn: bool = secs <= 5 and state == State.PLAYING
+	var st := WiiTheme.panel_style(26, Color("e25555") if warn else WiiTheme.PANEL_BORDER)
 	st.set_border_width_all(3)
 	c.draw_style_box(st, t_rect)
 	var txt := str(secs)
-	var ts := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 32)
-	c.draw_string(_font_bold, Vector2(640 - ts.x / 2, 60), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 32,
-			Color("e25555") if secs <= 5 and state == State.PLAYING else WiiTheme.TEXT)
+	var f_time := Fonts.get_font(800, 32)
+	var ts := f_time.get_string_size(txt)
+	c.draw_string(f_time, Vector2(640 - ts.x / 2, 60), txt,
+			Color("e25555") if warn else WiiTheme.TEXT)
 	# Puntuaciones a la derecha
 	if not show_scores:
 		return
+	var f_score := Fonts.get_font(800, 24)
+	var f_num := Fonts.get_font(800, 18)
 	var x := 1250.0
 	for i in range(players.size() - 1, -1, -1):
-		var p := players[i]
-		var s := format_score(get_score(p))
-		var w := _font_bold.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x + 70
+		var p: Player = players[i]
+		var s: String = format_score(get_score(p))
+		var w: float = f_score.get_string_size(s).x + 70
 		x -= w
 		var ps := WiiTheme.panel_style(24, p.color if p.is_connected_now() else WiiTheme.PANEL_BORDER)
 		ps.set_border_width_all(3)
 		c.draw_style_box(ps, Rect2(x, 24, w, 48))
 		c.draw_circle(Vector2(x + 26, 48), 15, p.color)
 		var n := str(p.index + 1)
-		var ns := _font_bold.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 18)
-		c.draw_string(_font_bold, Vector2(x + 26 - ns.x / 2, 55), n, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-		c.draw_string(_font_bold, Vector2(x + 50, 57), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, p.color.darkened(0.2))
+		var ns := f_num.get_string_size(n)
+		c.draw_string(f_num, Vector2(x + 26 - ns.x / 2, 55), n, Color(1, 1, 1, 1))
+		c.draw_string(f_score, Vector2(x + 50, 57), s, p.color.darkened(0.2))
 		x -= 10
 
 
 func _make_panel_overlay() -> Control:
 	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	var dim := ColorRect.new()
 	dim.color = Color(0.9, 0.93, 0.96, 0.75)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	root.add_child(dim)
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	root.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(640, 0)
+	panel.rect_min_size = Vector2(640, 0)
 	var st := WiiTheme.panel_style(30)
-	st.set_content_margin_all(32)
-	panel.add_theme_stylebox_override("panel", st)
+	st.content_margin_left = 32
+	st.content_margin_right = 32
+	st.content_margin_top = 32
+	st.content_margin_bottom = 32
+	panel.add_stylebox_override("panel", st)
 	center.add_child(panel)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 16)
+	box.add_constant_override("separation", 16)
 	panel.add_child(box)
 	root.set_meta("box", box)
 	_hud.add_child(root)
-	panel.pivot_offset = Vector2(320, 150)
-	panel.scale = Vector2(0.92, 0.92)
-	panel.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT) \
-			.tween_property(panel, "scale", Vector2.ONE, 0.3)
+	panel.rect_pivot_offset = Vector2(320, 150)
+	Anim.scale_to(panel, Vector2(0.92, 0.92), Vector2.ONE, 0.3)
 	return root
 
 
@@ -514,14 +525,12 @@ func _free_overlay() -> void:
 func _label(text: String, size: int, color: Color, weight := 600, wrap := false) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_font_override("font", WiiTheme.font(weight))
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", color)
+	l.align = Label.ALIGN_CENTER
+	l.add_font_override("font", Fonts.get_font(weight, size))
+	l.add_color_override("font_color", color)
 	if wrap:
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(576, 0)
+		l.autowrap = true
+		l.rect_min_size = Vector2(576, 0)
 	return l
 
 
@@ -537,11 +546,14 @@ func _control_pill(control) -> Control:
 	var st := WiiTheme.panel_style(20, WiiTheme.ACCENT)
 	st.bg_color = Color("8e4ec6") if control is int and control == Pad.A else WiiTheme.ACCENT_LIGHT
 	st.shadow_size = 0
-	st.set_content_margin_all(6)
+	st.content_margin_left = 6
+	st.content_margin_right = 6
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
 	st.content_margin_left = 16
 	st.content_margin_right = 16
-	panel.add_theme_stylebox_override("panel", st)
-	panel.add_child(_label(text, 20, Color.WHITE if control is int and control == Pad.A else WiiTheme.ACCENT_DARK, 800))
+	panel.add_stylebox_override("panel", st)
+	panel.add_child(_label(text, 20, Color(1, 1, 1, 1) if control is int and control == Pad.A else WiiTheme.ACCENT_DARK, 800))
 	return panel
 
 
@@ -551,18 +563,21 @@ func _result_row(r: Dictionary) -> Control:
 	var st := WiiTheme.panel_style(22, p.color)
 	st.set_border_width_all(3)
 	st.shadow_size = 2
-	st.set_content_margin_all(8)
+	st.content_margin_left = 8
+	st.content_margin_right = 8
+	st.content_margin_top = 8
+	st.content_margin_bottom = 8
 	st.content_margin_left = 18
 	st.content_margin_right = 18
-	row.add_theme_stylebox_override("panel", st)
+	row.add_stylebox_override("panel", st)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 16)
+	h.add_constant_override("separation", 16)
 	row.add_child(h)
 	var place := _label("%dº" % r.place, 30, p.color.darkened(0.15), 800)
-	place.custom_minimum_size = Vector2(60, 0)
+	place.rect_min_size = Vector2(60, 0)
 	h.add_child(place)
 	var name_l := _label(loc({"es": "Jugador %d", "en": "Player %d"}) % (p.index + 1), 26, WiiTheme.TEXT, 700)
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	name_l.align = Label.ALIGN_LEFT
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(name_l)
 	h.add_child(_label(format_score(r.score), 26, WiiTheme.TEXT_SOFT, 700))
@@ -572,13 +587,11 @@ func _result_row(r: Dictionary) -> Control:
 func _big_flash(text: String, color: Color) -> void:
 	# Ocupa toda la pantalla con el texto centrado, y escala desde el centro.
 	var l := _label(text, 140, color, 800)
-	l.set_anchors_preset(Control.PRESET_FULL_RECT)
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+	l.valign = Label.VALIGN_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.pivot_offset = get_viewport_rect().size / 2
+	l.rect_pivot_offset = get_viewport_rect().size / 2
 	_hud.add_child(l)
-	l.scale = Vector2(1.6, 1.6)
-	var tw := l.create_tween()
-	tw.tween_property(l, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(l, "modulate:a", 0.0, 0.4).set_delay(0.15)
-	tw.tween_callback(l.queue_free)
+	l.rect_scale = Vector2(1.6, 1.6)
+	Anim.scale_to(l, Vector2(1.6, 1.6), Vector2.ONE, 0.25)
+	Anim.fade_out(l, 0.4, 0.15)

@@ -10,8 +10,6 @@ const THUMB_H := 138.0
 const THUMB_RADIUS := 16.0
 const FOCUS_SCALE := 1.06
 
-static var _name_font: Font
-
 var game: Dictionary
 var _thumb: Script
 var _art: Control
@@ -20,24 +18,23 @@ var _tween: Tween
 
 func _init(p_game: Dictionary) -> void:
 	game = p_game
-	var path := "res://minigames/%s/thumb.gd" % game.id
+	var path: String = "res://minigames/%s/thumb.gd" % game.id
 	if ResourceLoader.exists(path):
 		_thumb = load(path)
 
 
 func _ready() -> void:
-	custom_minimum_size = SIZE
-	pivot_offset = SIZE / 2
+	rect_min_size = SIZE
+	rect_pivot_offset = SIZE / 2
 	text = ""
 	# Fondo siempre blanco (la máscara de esquinas de la miniatura es blanca).
 	var normal := WiiTheme.panel_style(24)
-	var hot := normal.duplicate() as StyleBoxFlat
+	var hot: StyleBoxFlat = normal.duplicate()
 	hot.border_color = WiiTheme.ACCENT
 	hot.set_border_width_all(3)
-	add_theme_stylebox_override("normal", normal)
-	add_theme_stylebox_override("hover", hot)
-	add_theme_stylebox_override("pressed", hot)
-	add_theme_stylebox_override("hover_pressed", hot)
+	add_stylebox_override("normal", normal)
+	add_stylebox_override("hover", hot)
+	add_stylebox_override("pressed", hot)
 	var focus := StyleBoxFlat.new()
 	focus.draw_center = false
 	focus.border_color = WiiTheme.ACCENT
@@ -45,33 +42,35 @@ func _ready() -> void:
 	focus.set_corner_radius_all(28)
 	focus.set_expand_margin_all(5)
 	focus.anti_aliasing = true
-	add_theme_stylebox_override("focus", focus)
+	add_stylebox_override("focus", focus)
 
 	_art = Control.new()
-	_art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_art.set_anchors_and_margins_preset(Control.PRESET_WIDE)
 	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_art.draw.connect(_draw_art)
+	_art.connect("draw", self, "_draw_art")
 	add_child(_art)
-	focus_entered.connect(_on_focus.bind(true))
-	focus_exited.connect(_on_focus.bind(false))
+	connect("focus_entered", self, "_on_focus", [true])
+	connect("focus_exited", self, "_on_focus", [false])
 
 
 func _on_focus(on: bool) -> void:
-	z_index = 1 if on else 0
-	if _tween:
-		_tween.kill()
-	_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_tween.tween_property(self, "scale", Vector2.ONE * (FOCUS_SCALE if on else 1.0), 0.18)
-	_art.queue_redraw()
+	if on:
+		raise()
+	if _tween != null and is_instance_valid(_tween):
+		_tween.stop_all()
+		_tween.queue_free()
+	var target := Vector2.ONE * (FOCUS_SCALE if on else 1.0)
+	_tween = Anim.scale_to(self, rect_scale, target, 0.18)
+	_art.update()
 
 
 func _draw_art() -> void:
 	var r := Rect2(THUMB_MARGIN, THUMB_MARGIN, SIZE.x - THUMB_MARGIN * 2, THUMB_H)
 	if _thumb:
-		_thumb.draw(_art, r)
+		_thumb.call("draw", _art, r)
 	else:
 		_draw_fallback(r)
-	DrawKit.round_corners_mask(_art, r, THUMB_RADIUS, Color.WHITE)
+	DrawKit.round_corners_mask(_art, r, THUMB_RADIUS, Color(1, 1, 1, 1))
 	var frame := StyleBoxFlat.new()
 	frame.draw_center = false
 	frame.border_color = Color(WiiTheme.PANEL_BORDER, 0.9)
@@ -80,18 +79,17 @@ func _draw_art() -> void:
 	frame.anti_aliasing = true
 	_art.draw_style_box(frame, r)
 	# Nombre del juego.
-	if _name_font == null:
-		_name_font = WiiTheme.font(800)
-	var f := _name_font
 	var name_text := MinigameBase.loc(game.title)
 	var fs := 21
-	var col := WiiTheme.ACCENT_DARK if has_focus() else WiiTheme.TEXT
-	var ts := f.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var f := Fonts.get_font(800, fs)
+	var ts := f.get_string_size(name_text)
 	while ts.x > SIZE.x - 24 and fs > 15:
 		fs -= 1
-		ts = f.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		f = Fonts.get_font(800, fs)
+		ts = f.get_string_size(name_text)
 	var y := r.end.y + (SIZE.y - r.end.y) / 2 + ts.y * 0.3
-	_art.draw_string(f, Vector2((SIZE.x - ts.x) / 2, y), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	var col := WiiTheme.ACCENT_DARK if has_focus() else WiiTheme.TEXT
+	_art.draw_string(f, Vector2((SIZE.x - ts.x) / 2, y), name_text, col)
 
 
 ## Miniatura genérica: degradado con la inicial del juego.
@@ -99,5 +97,5 @@ func _draw_fallback(r: Rect2) -> void:
 	var hue := float(hash(game.id) % 360) / 360.0
 	DrawKit.vgradient(_art, r, Color.from_hsv(hue, 0.35, 1.0), Color.from_hsv(hue, 0.55, 0.9))
 	DrawKit.cloud(_art, r.position + Vector2(52, 36), 0.6)
-	DrawKit.outlined_text(_art, WiiTheme.font(900), r.get_center(), MinigameBase.loc(game.title).left(1),
+	DrawKit.outlined_text(_art, 900, r.get_center(), MinigameBase.loc(game.title).left(1),
 			64, Color.from_hsv(hue, 0.6, 0.75))

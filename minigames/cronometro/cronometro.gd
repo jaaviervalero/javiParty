@@ -39,10 +39,10 @@ class Racer:
 	var style: StyleBoxFlat
 
 
-var _racers: Array[Racer] = []
-var _targets: Array[float] = []
+var _racers: Array = []
+var _targets: Array = []
 var _round := 0  # 0..ROUNDS-1
-var _phase := Phase.RUN
+var _phase: int = Phase.RUN
 var _clock := 0.0
 var _phase_t := 0.0
 var _time := 0.0
@@ -65,7 +65,7 @@ func format_score(value) -> String:
 
 
 func _col_width() -> float:
-	return minf(ARENA.size.x / float(maxi(players.size(), 1)), MAX_COL_W)
+	return min(ARENA.size.x / float(max(players.size(), 1)), MAX_COL_W)
 
 
 func _col_left() -> float:
@@ -87,7 +87,9 @@ func _setup() -> void:
 
 
 func _random_target() -> float:
-	return float(randi_range(int(TARGET_MIN / TARGET_STEP), int(TARGET_MAX / TARGET_STEP))) * TARGET_STEP
+	var lo := int(TARGET_MIN / TARGET_STEP)
+	var hi := int(TARGET_MAX / TARGET_STEP)
+	return float(lo + randi() % (hi - lo + 1)) * TARGET_STEP
 
 
 func _game_start() -> void:
@@ -116,7 +118,7 @@ func _game_process(delta: float) -> void:
 		_run_round(delta)
 	else:
 		for r in _racers:
-			r.flash = maxf(0.0, r.flash - delta * 2.0)
+			r.flash = max(0.0, r.flash - delta * 2.0)
 		if _phase_t >= REVEAL_PAUSE:
 			_round += 1
 			if _round >= ROUNDS:
@@ -128,12 +130,12 @@ func _game_process(delta: float) -> void:
 func _run_round(delta: float) -> void:
 	_clock += delta
 	for r in _racers:
-		r.flash = maxf(0.0, r.flash - delta * 2.0)
+		r.flash = max(0.0, r.flash - delta * 2.0)
 		if not r.stopped and r.player.just_pressed(Pad.A):
 			r.stopped = true
 			r.time = _clock
 			r.flash = 1.0
-			Sfx.play("pop", randf_range(0.95, 1.15))
+			Sfx.play("pop", rand_range(0.95, 1.15))
 
 	if not _hidden_sound and _clock >= CLOCK_VISIBLE_SEC:
 		_hidden_sound = true
@@ -151,7 +153,7 @@ func _run_round(delta: float) -> void:
 			if not r.stopped:
 				r.stopped = true
 				r.time = _targets[_round] + TIMEOUT_EXTRA
-				Sfx.play("back", randf_range(0.9, 1.05))
+				Sfx.play("back", rand_range(0.9, 1.05))
 		_reveal()
 
 
@@ -165,15 +167,15 @@ func _add_error(r: Racer, amount: float) -> void:
 func _reveal() -> void:
 	_phase = Phase.REVEAL
 	_phase_t = 0.0
-	var target := _targets[_round]
+	var target: float = _targets[_round]
 	var best_err := INF
 	for r in _racers:
-		r.err = absf(r.time - target)
-		best_err = minf(best_err, r.err)
+		r.err = abs(r.time - target)
+		best_err = min(best_err, r.err)
 	for r in _racers:
 		r.best = r.err <= best_err + 0.0001
 		_add_error(r, r.err)
-	Sfx.play("star", randf_range(0.95, 1.1))
+	Sfx.play("star", rand_range(0.95, 1.1))
 
 
 func _game_end() -> void:
@@ -182,10 +184,10 @@ func _game_end() -> void:
 	if _phase == Phase.RUN:
 		# La ronda en curso también cuenta al agotarse el tiempo: quien no haya
 		# parado recibe el error máximo (objetivo + margen), no el margen a secas.
-		var target := _targets[_round]
+		var target: float = _targets[_round]
 		for r in _racers:
 			if r.stopped:
-				_add_error(r, absf(r.time - target))
+				_add_error(r, abs(r.time - target))
 			else:
 				_add_error(r, target + TIMEOUT_EXTRA)
 	# Rondas que no se llegaron a jugar: desvío máximo para todos.
@@ -202,20 +204,20 @@ func _draw_scenery(ci: CanvasItem) -> void:
 	DrawKit.arena_frame(ci, ARENA, WALL_TOP, WALL_BOTTOM)
 	# Mesa de madera al fondo del taller.
 	var table_y := ARENA.end.y - 46.0
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		Vector2(ARENA.position.x, table_y),
 		Vector2(ARENA.end.x, table_y),
 		Vector2(ARENA.end.x, ARENA.end.y),
 		Vector2(ARENA.position.x, ARENA.end.y),
 	]), clip, TABLE_WOOD)
-	DrawKit.clipped_polygon(ci, PackedVector2Array([
+	DrawKit.clipped_polygon(ci, PoolVector2Array([
 		Vector2(ARENA.position.x, table_y),
 		Vector2(ARENA.end.x, table_y),
 		Vector2(ARENA.end.x, table_y + 8.0),
 		Vector2(ARENA.position.x, table_y + 8.0),
 	]), clip, TABLE_LIGHT)
 	for i in 7:
-		var gx := ARENA.position.x + 70.0 + i * (ARENA.size.x - 140.0) / 6.0
+		var gx: float = ARENA.position.x + 70.0 + i * (ARENA.size.x - 140.0) / 6.0
 		ci.draw_line(Vector2(gx, table_y + 16.0), Vector2(gx + 30.0, ARENA.end.y - 6.0),
 				TABLE_DARK, 2.0)
 	# Columnas fijas de cada jugador.
@@ -239,10 +241,10 @@ func _draw_gears() -> void:
 
 
 func _draw_gear(center: Vector2, r: float, teeth: int, angle: float, col: Color) -> void:
-	var pts := PackedVector2Array()
+	var pts := PoolVector2Array()
 	for i in teeth * 2:
 		var a := angle + TAU * float(i) / float(teeth * 2)
-		pts.append(center + Vector2.from_angle(a) * (r if i % 2 == 0 else r * 0.78))
+		pts.append(center + Vector2(cos(a), sin(a)) * (r if i % 2 == 0 else r * 0.78))
 	draw_colored_polygon(pts, Color(col, 0.75))
 	draw_circle(center, r * 0.58, Color(col, 0.85))
 	draw_circle(center, r * 0.24, Color(1, 1, 1, 0.5))
@@ -251,7 +253,7 @@ func _draw_gear(center: Vector2, r: float, teeth: int, angle: float, col: Color)
 ## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
 func _draw() -> void:
 	_draw_gears()
-	var target := _targets[mini(_round, ROUNDS - 1)]
+	var target: float = _targets[min(_round, ROUNDS - 1)]
 	draw_text_centered(loc({"es": "Objetivo", "en": "Target"}) + "  " + ("%.2f s" % target),
 			Vector2(640, ARENA.position.y + 52), 46, WiiTheme.TEXT)
 	draw_text_centered(loc({"es": "Ronda %d de %d", "en": "Round %d of %d"}) % [_round + 1, ROUNDS],
@@ -261,7 +263,7 @@ func _draw() -> void:
 	var left := _col_left()
 	var hidden := _clock >= CLOCK_VISIBLE_SEC
 	for i in _racers.size():
-		var r := _racers[i]
+		var r: Racer = _racers[i]
 		var rect := Rect2(left + colw * i + COL_MARGIN, COL_TOP,
 				colw - COL_MARGIN * 2.0, COL_BOTTOM - COL_TOP)
 		if r.best:
@@ -277,14 +279,14 @@ func _draw() -> void:
 
 func _draw_racer(r: Racer, hidden: bool) -> void:
 	var p := r.player
-	var col := p.color if p.is_connected_now() else p.color.lerp(Color("c8ced4"), 0.7)
+	var col: Color = p.color if p.is_connected_now() else p.color.linear_interpolate(Color("c8ced4"), 0.7)
 
 	# Ficha del jugador
 	var cy := COL_TOP + 90.0
 	draw_circle(Vector2(r.cx, cy) + Vector2(0, 6), 36, WiiTheme.SHADOW)
 	draw_circle(Vector2(r.cx, cy), 36, col)
 	draw_circle(Vector2(r.cx - 11, cy - 12), 14, Color(1, 1, 1, 0.4))
-	draw_text_centered(str(p.index + 1), Vector2(r.cx, cy), 30, Color.WHITE)
+	draw_text_centered(str(p.index + 1), Vector2(r.cx, cy), 30, Color(1, 1, 1, 1))
 	if r.flash > 0.0:
 		draw_arc(Vector2(r.cx, cy), 36.0 + (1.0 - r.flash) * 46.0, 0.0, TAU, 32,
 				Color(p.color, r.flash * 0.8), 6.0)
@@ -311,7 +313,7 @@ func _draw_racer(r: Racer, hidden: bool) -> void:
 
 	# Error al revelar
 	if _phase == Phase.REVEAL:
-		var ecol := Color("e25555") if r.err > 1.0 else WiiTheme.TEXT
+		var ecol: Color = Color("e25555") if r.err > 1.0 else WiiTheme.TEXT
 		if r.best:
 			ecol = Color("b8891b")
 		draw_text_centered(loc({"es": "Error", "en": "Miss"}), Vector2(r.cx, COL_TOP + 312), 22, WiiTheme.TEXT_SOFT)
@@ -320,7 +322,7 @@ func _draw_racer(r: Racer, hidden: bool) -> void:
 
 ## Caja de reloj de bolsillo con tapa clara y brillo (decoración del cronómetro).
 func _draw_pocket_watch(center: Vector2, col: Color) -> void:
-	var rim := col.lerp(Color.WHITE, 0.55)
+	var rim := col.linear_interpolate(Color(1, 1, 1, 1), 0.55)
 	# Anilla y corona.
 	draw_arc(center + Vector2(0, -52.0), 7.0, 0.0, TAU, 14, Color("c9a75a"), 4.0, true)
 	draw_rect(Rect2(center + Vector2(-7, -50.0), Vector2(14, 12)), Color("d3b268"))

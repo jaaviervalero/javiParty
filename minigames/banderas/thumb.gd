@@ -1,4 +1,4 @@
-extends RefCounted
+extends Reference
 ## Miniatura de "Banderas en la playa": cielo, mar, arena, una bandera y dos
 ## corredores lanzándose a por ella.
 
@@ -19,7 +19,7 @@ static func draw(ci: CanvasItem, r: Rect2) -> void:
 	var pole := Vector2(r.position.x + r.size.x * 0.74, r.end.y - 22)
 	DrawKit.soft_shadow(ci, pole + Vector2(0, 2), 22)
 	ci.draw_line(pole, pole + Vector2(0, -52), Color("8e99a3"), 3.0, true)
-	ci.draw_colored_polygon(PackedVector2Array([pole + Vector2(1, -52), pole + Vector2(30, -44),
+	ci.draw_colored_polygon(PoolVector2Array([pole + Vector2(1, -52), pole + Vector2(30, -44),
 		pole + Vector2(1, -34)]), Color("33b5e5"))
 	ci.draw_circle(pole + Vector2(0, -53), 3.5, DrawKit.GOLD)
 	# Corredores: uno lanzado en plancha y otro detrás.
