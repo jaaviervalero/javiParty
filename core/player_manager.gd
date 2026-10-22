@@ -66,15 +66,20 @@ func remove_player(index: int) -> void:
 
 func _on_controller_connected(ctrl) -> void:
 	var id: String = ctrl.device_id()
-	for p in players:
-		if p != null and p.device_id == id:
-			p.controller = ctrl
-			emit_signal("player_reconnected", p)
-			return
-	# ¿Este mismo controller ya está asignado con otro id (p. ej. llegó la MAC tarde)?
+	# 1) El mismo mando (misma IP:puerto#slot) que ya tenía jugador: vuelve al suyo.
+	#    Va primero porque es la identidad segura (p. ej. la MAC llegó tarde).
 	for p in players:
 		if p != null and p.controller == ctrl:
 			p.device_id = id
+			emit_signal("player_reconnected", p)
+			return
+	# 2) Mismo dispositivo con otro mando (cambió de IP): solo si ese jugador está
+	#    DESCONECTADO. La app DSU Controller de iPhone manda la misma MAC inventada
+	#    en todos los móviles (iOS no da la real), así que la MAC no basta: sin esta
+	#    condición el móvil de un amigo le quitaba el jugador 1 al que ya jugaba.
+	for p in players:
+		if p != null and p.device_id == id and not p.is_connected_now():
+			p.controller = ctrl
 			emit_signal("player_reconnected", p)
 			return
 	for i in MAX_PLAYERS:

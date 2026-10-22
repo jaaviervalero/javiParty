@@ -13,6 +13,7 @@ godot3 --headless --path . --editor --quit   # importar (crea .import)
 tools/smoke.sh <id>                 # test de un minijuego (usa godot3)
 godot3 --headless --path . -s tests/run_tests.gd    # DSU, CRC y mandos
 godot3 --headless --path . -s tests/ui_focus.gd     # foco y rejilla del selector
+godot3 --headless --path . -s tests/players.gd      # mandos -> jugadores (misma MAC)
 tools/android.sh --export           # APK (build/javiparty.apk)
 ```
 
