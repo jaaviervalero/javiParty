@@ -15,7 +15,6 @@ const PETAL_COLORS: Array[Color] = [
 	Color("9ad4f0"), Color("ffc98f"), Color("f6a9c9"), Color("a9e0a4"),
 ]
 const DIRS: Array[int] = [Pad.UP, Pad.RIGHT, Pad.DOWN, Pad.LEFT]
-const PITCHES: Array[float] = [1.0, 1.18, 0.84, 1.34]
 const DIR_VECS := [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]
 
 enum Phase { WATCH, REPEAT, GAP }
@@ -97,7 +96,7 @@ func _tick_watch(delta: float) -> void:
 	var idx := int(_phase_t / STEP_SEC)
 	if idx != _watch_played and idx < _seq.size():
 		_watch_played = idx
-		Sfx.play("move", PITCHES[_seq[idx]] * randf_range(0.98, 1.02))
+		Sfx.play("move")  # mismo sonido en todas: solo vale la vista
 	_phase_t += delta
 	if idx >= _seq.size():
 		_phase = Phase.REPEAT
@@ -153,7 +152,7 @@ func _try_input(s: MemPlayer) -> void:
 	if expected in pressed:
 		_pressed_flash[expected] = 0.22
 		s.progress += 1
-		Sfx.play("pop", PITCHES[expected] * 1.1)
+		Sfx.play("pop")
 		if s.progress >= _seq.size():
 			s.done_round = true
 			add_score(s.player)
