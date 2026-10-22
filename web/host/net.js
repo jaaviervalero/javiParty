@@ -181,7 +181,9 @@ function close(peer) {
   peer = Number(peer) | 0;
   const id = peerIds.get(peer);
   if (id === undefined) return;
-  ignored.add(id);
+  // No se ignora para siempre: por WebRTC no hay forma de "colgar" de verdad, y
+  // si el móvil vuelve a hablar (tras un corte de unos segundos) tiene que poder
+  // entrar otra vez; onPeerMessage lo da de alta como peer nuevo.
   sources.delete(id);
   peers.delete(id);
   peerIds.delete(peer);

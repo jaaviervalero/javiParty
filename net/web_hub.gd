@@ -15,8 +15,8 @@ signal controller_updated(ctrl)
 
 const WebLanServer := preload("res://net/web_lan_server.gd")
 const WebRtcBridge := preload("res://net/web_rtc_bridge.gd")
-## Página del mando en GitHub Pages; la sala va detrás del "#".
-const PAGES_BASE := "https://jaaviervalero.github.io/javiParty/m/#"
+## Página del mando si no se puede leer la dirección del juego; la sala va detrás del "#".
+const PAGES_BASE := "https://jaaviervalero.github.io/javiParty/jugar/m/#"
 const PROTOCOL_VERSION := 1
 const TIMEOUT_MSEC := 3000
 const PING_SEC := 1.0
@@ -86,11 +86,20 @@ func controller_url() -> String:
 		return ""
 	if OS.has_feature("HTML5"):
 		var r := room()
-		return PAGES_BASE + r if r != "" else ""
+		return _controller_base() + r if r != "" else ""
 	var ip := LAN.best_private_ipv4(IP.get_local_addresses())
 	if ip == "":
 		return ""
 	return "http://%s:%d" % [ip, _transport.http_port]
+
+
+## El mando va en la carpeta m/ junto a la página del juego (así vale igual en
+## local que en GitHub Pages): ".../jugar/?x#y" -> ".../jugar/m/#".
+func _controller_base() -> String:
+	var base = JavaScript.eval("location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '')", true)
+	if typeof(base) != TYPE_STRING or not str(base).begins_with("http"):
+		return PAGES_BASE
+	return str(base) + "m/#"
 
 
 ## Sala de 4 letras del transporte WebRTC; "" con la LAN o sin transporte.
