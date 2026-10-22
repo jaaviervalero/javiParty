@@ -28,7 +28,7 @@ const GAMES := [
 	{"id": "pesca", "scene": "res://minigames/pesca/pesca.tscn",
 		"title": {"es": "A pescar", "en": "Gone fishing"}},
 	{"id": "duelo", "scene": "res://minigames/duelo/duelo.tscn",
-		"title": {"es": "Duelo al sol", "en": "Showdown"}},
+		"title": {"es": "¡Desenfunda!", "en": "Draw!"}},
 	{"id": "cronometro", "scene": "res://minigames/cronometro/cronometro.tscn",
 		"title": {"es": "Para el reloj", "en": "Stop the clock"}},
 	{"id": "globos", "scene": "res://minigames/globos/globos.tscn",

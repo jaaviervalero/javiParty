@@ -1,5 +1,5 @@
 extends MinigameBase
-## "Duelo al sol": rondas de reflejos. Tras una espera aleatoria aparece una
+## "¡Desenfunda!": rondas de reflejos. Tras una espera aleatoria aparece una
 ## señal grande; el primero en pulsar A gana la ronda. Quien se adelanta queda
 ## fuera de esa ronda. 5 rondas y gana quien más gane.
 
@@ -51,7 +51,7 @@ var _time := 0.0
 
 
 func _configure() -> void:
-	title = {"es": "Duelo al sol", "en": "Showdown"}
+	title = {"es": "¡Desenfunda!", "en": "Draw!"}
 	instructions = {"es": "Pulsa A en cuanto aparezca la señal; si te adelantas, quedas fuera de la ronda.",
 		"en": "Press A as soon as the signal appears; jump the gun and you sit the round out."}
 	controls = [

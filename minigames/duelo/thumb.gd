@@ -1,5 +1,5 @@
 extends RefCounted
-## Miniatura de "Duelo al sol" para el selector: oeste al mediodía y señal.
+## Miniatura de "¡Desenfunda!" para el selector: oeste al mediodía y señal.
 
 static func draw(ci: CanvasItem, r: Rect2) -> void:
 	# Cielo cálido y sol.
