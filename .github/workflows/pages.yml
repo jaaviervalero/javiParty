@@ -6,6 +6,8 @@ on:
   push:
     branches: [main]
     paths: ["site/**", ".github/workflows/pages.yml"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +27,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # La versión de navegador (rama web) va como zip en la última release:
+      # se despliega en /jugar/ y el mando en /jugar/m/.
+      - name: Versión web en /jugar/
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern javiParty-web.zip --dir /tmp/web
+          mkdir -p site/jugar
+          unzip -q /tmp/web/javiParty-web.zip -d site/jugar
+          ls -la site/jugar site/jugar/m
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
