@@ -108,8 +108,32 @@ section { scroll-margin-top: 80px; }
 .steps.three li { padding: 78px 22px 24px; }
 .steps.three li > b { top: 22px; }
 
-.gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 26px 0 10px; }
-.gallery img { border-radius: 16px; box-shadow: var(--shadow); border: 3px solid #fff; }
+/* --- Los minijuegos --- */
+.games { padding: 40px 0 0; scroll-margin-top: 80px; }
+.games > h2 { font-size: 32px; text-align: center; }
+.games-sub { text-align: center; color: var(--soft); margin: 8px auto 26px; max-width: 620px; }
+.games-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.game {
+  margin: 0; background: var(--panel); border-radius: 20px; overflow: hidden;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  transition: transform .15s;
+}
+.game:hover { transform: translateY(-3px); }
+.shot { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.game figcaption { padding: 12px 16px 16px; }
+.game h3 { font-size: 18px; margin-bottom: 4px; }
+.game p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--soft); }
+
+.viewer {
+  padding: 0; border: 0; border-radius: 18px; max-width: min(1280px, 94vw);
+  background: #2e3740; box-shadow: 0 30px 80px rgba(0,0,0,.4);
+}
+.viewer::backdrop { background: rgba(30, 40, 50, .75); }
+.viewer img { width: 100%; border-radius: 14px; }
+.viewer .close {
+  position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,.9); color: #3a4650; font-size: 20px; font-weight: 900; cursor: pointer;
+}
 
 /* --- Secciones de instalación --- */
 .card-section {
@@ -187,11 +211,17 @@ footer { text-align: center; padding: 30px 16px 50px; color: var(--soft); }
 footer .dots { justify-content: center; }
 
 /* --- Móvil --- */
+@media (max-width: 1000px) and (min-width: 861px) {
+  .games-grid { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; padding-top: 32px; gap: 28px; }
   .screen { transform: none; }
   .steps.three, .card-section .steps { grid-template-columns: 1fr; }
-  .gallery { grid-template-columns: repeat(2, 1fr); }
+  .games-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .game figcaption { padding: 10px 12px 12px; }
+  .game h3 { font-size: 16px; }
+  .game p { font-size: 14px; }
   .top-links { display: none; }
   .lang { margin-left: auto; }
   .card-section { padding: 22px 16px; border-radius: 26px; }

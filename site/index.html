@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>javiParty · Minijuegos con el móvil como mando</title>
-<meta name="description" content="18 minijuegos para hasta 4 jugadores. Se juega en la tele (Android TV) o en el PC (Windows), y cada uno usa su móvil como mando.">
+<meta name="description" content="16 minijuegos para hasta 4 jugadores. Se juega en la tele (Android TV) o en el PC (Windows), y cada uno usa su móvil como mando.">
 <meta name="theme-color" content="#fbfcfd">
 <meta property="og:title" content="javiParty">
-<meta property="og:description" content="18 minijuegos para hasta 4 jugadores, con el móvil como mando.">
+<meta property="og:description" content="16 minijuegos para hasta 4 jugadores, con el móvil como mando.">
 <meta property="og:image" content="https://jaaviervalero.github.io/javiParty/img/globos.webp">
 <link rel="icon" href="favicon.png">
 <link rel="stylesheet" href="style.css">
@@ -20,6 +20,7 @@
     <span><span class="javi">javi</span><b>Party</b></span>
   </a>
   <nav class="top-links">
+    <a href="#juegos"><span class="es">Juegos</span><span class="en">Games</span></a>
     <a href="#tele"><span class="es">Tele</span><span class="en">TV</span></a>
     <a href="#pc">PC</a>
     <a href="#mandos"><span class="es">Mandos</span><span class="en">Controllers</span></a>
@@ -38,8 +39,8 @@
         <span class="en">A party of minigames with your phone as the controller</span>
       </h1>
       <p class="lead">
-        <span class="es">18 minijuegos para 1 a 4 jugadores. Se juega en la tele o en el PC, y cada uno usa su móvil.</span>
-        <span class="en">18 minigames for 1 to 4 players. Play on the TV or on a PC, and everyone uses their own phone.</span>
+        <span class="es">16 minijuegos para 1 a 4 jugadores. Se juega en la tele o en el PC, y cada uno usa su móvil.</span>
+        <span class="en">16 minigames for 1 to 4 players. Play on the TV or on a PC, and everyone uses their own phone.</span>
       </p>
       <div class="cta">
         <a class="btn tv" href="#tele">📺 <span class="es">En la tele</span><span class="en">On the TV</span><small>Android TV</small></a>
@@ -73,16 +74,132 @@
       <li style="--c:#4cbf6b">
         <b>3</b>
         <h3><span class="es">¡A jugar!</span><span class="en">Play!</span></h3>
-        <p><span class="es">Partidas de un minuto: sumo, globos, tanques, pintar el suelo… y 14 más.</span><span class="en">One-minute rounds: sumo, balloons, tanks, paint the floor… and 14 more.</span></p>
+        <p><span class="es">Partidas de un minuto: sumo, globos, tanques, pintar el suelo… y 12 más.</span><span class="en">One-minute rounds: sumo, balloons, tanks, paint the floor… and 12 more.</span></p>
       </li>
     </ol>
-    <div class="gallery">
-      <img src="img/select.webp" alt="Selector de minijuegos" loading="lazy" width="1280" height="720">
-      <img src="img/sumo.webp" alt="Sumo de bolas" loading="lazy" width="1280" height="720">
-      <img src="img/pintura.webp" alt="Pinta el suelo" loading="lazy" width="1280" height="720">
-      <img src="img/tanques.webp" alt="Tanquecitos" loading="lazy" width="1280" height="720">
+  </section>
+
+  <!-- ===== Los minijuegos (capturas sacadas del propio juego con tools/shot.sh) ===== -->
+  <section id="juegos" class="games">
+    <h2><span class="es">Los 16 minijuegos</span><span class="en">All 16 minigames</span></h2>
+    <p class="games-sub"><span class="es">Partidas cortas, de 30 a 90 segundos. Se pueden jugar sueltos o en una fiesta de varias rondas.</span><span class="en">Short rounds, 30 to 90 seconds. Play them one by one or as a multi-round party.</span></p>
+    <div class="games-grid">
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/estrellas.webp"><img src="img/estrellas.webp" alt="Estrellas" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Estrellas</span><span class="en">Stars</span></h3>
+          <p><span class="es">Recoge más estrellas que nadie y empuja a los demás.</span><span class="en">Grab more stars than anyone and push the others around.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/sumo.webp"><img src="img/sumo.webp" alt="Sumo de bolas" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Sumo de bolas</span><span class="en">Ball sumo</span></h3>
+          <p><span class="es">Empuja y embiste: la última bola sobre la plataforma gana la ronda.</span><span class="en">Push and dash: the last ball on the platform wins the round.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/pintura.webp"><img src="img/pintura.webp" alt="Pinta el suelo" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Pinta el suelo</span><span class="en">Paint the floor</span></h3>
+          <p><span class="es">Pinta más casillas que nadie rodando por el suelo y cogiendo power-ups.</span><span class="en">Paint more tiles than anyone by rolling around and grabbing power-ups.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/saltarin.webp"><img src="img/saltarin.webp" alt="Pajarito saltarín" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Pajarito saltarín</span><span class="en">Flappy hop</span></h3>
+          <p><span class="es">Pulsa A para aletear y pasa entre las columnas sin chocar.</span><span class="en">Tap A to flap and slip through the columns without crashing.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/esquiva.webp"><img src="img/esquiva.webp" alt="Esquiva" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Esquiva</span><span class="en">Dodge!</span></h3>
+          <p><span class="es">Esquiva todo; con el escudo (A) devuelves proyectiles y si das a otro ganas una vida.</span><span class="en">Dodge everything; your shield (A) deflects projectiles, and hitting another player earns you a life.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/memoria.webp"><img src="img/memoria.webp" alt="Sigue la secuencia" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Sigue la secuencia</span><span class="en">Follow the sequence</span></h3>
+          <p><span class="es">Mira la secuencia de direcciones y repítela con la cruceta.</span><span class="en">Watch the direction sequence and repeat it with the D-pad.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/ritmo.webp"><img src="img/ritmo.webp" alt="Al compás" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Al compás</span><span class="en">On the beat</span></h3>
+          <p><span class="es">Pulsa A en los círculos y B en los rombos al llegar a la línea.</span><span class="en">Press A on circles and B on diamonds as they reach the line.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/ovejas.webp"><img src="img/ovejas.webp" alt="Cuenta ovejas" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Cuenta ovejas</span><span class="en">Count the sheep</span></h3>
+          <p><span class="es">Cuenta las ovejas que cruzan (los lobos no cuentan) y marca el total.</span><span class="en">Count the sheep that cross (wolves don&#x27;t count) and enter the total.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/tanques.webp"><img src="img/tanques.webp" alt="Tanquecitos" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Tanquecitos</span><span class="en">Tiny tanks</span></h3>
+          <p><span class="es">Dispara a los demás tanques: las balas rebotan dos veces.</span><span class="en">Shoot the other tanks: bullets bounce twice.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/colina.webp"><img src="img/colina.webp" alt="Rey de la colina" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Rey de la colina</span><span class="en">King of the hill</span></h3>
+          <p><span class="es">Quédate solo en la zona brillante y echa a los demás.</span><span class="en">Stay alone in the glowing zone and push the others out.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/pesca.webp"><img src="img/pesca.webp" alt="A pescar" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">A pescar</span><span class="en">Gone fishing</span></h3>
+          <p><span class="es">Baja el anzuelo, espera a que pique y pulsa A en el momento justo.</span><span class="en">Lower your hook, wait for a bite and press A at the right moment.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/duelo.webp"><img src="img/duelo.webp" alt="¡Desenfunda!" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">¡Desenfunda!</span><span class="en">Draw!</span></h3>
+          <p><span class="es">Pulsa A en cuanto aparezca la señal; si te adelantas, quedas fuera de la ronda.</span><span class="en">Press A as soon as the signal appears; jump the gun and you sit the round out.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/cronometro.webp"><img src="img/cronometro.webp" alt="Para el reloj" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Para el reloj</span><span class="en">Stop the clock</span></h3>
+          <p><span class="es">Para tu cronómetro lo más cerca posible del objetivo: el que menos se desvíe gana.</span><span class="en">Stop your timer as close to the target as you can: the smallest miss wins.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/globos.webp"><img src="img/globos.webp" alt="Infla el globo" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Infla el globo</span><span class="en">Pump it up</span></h3>
+          <p><span class="es">Machaca A para inflar tu globo: el que más globos reviente gana.</span><span class="en">Mash A to inflate your balloon: the most balloons popped wins.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/dominadas.webp"><img src="img/dominadas.webp" alt="Concurso de dominadas" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Concurso de dominadas</span><span class="en">Pull-up contest</span></h3>
+          <p><span class="es">Pulsa A cuando la aguja esté en la zona verde para hacer dominadas; B para descansar los brazos.</span><span class="en">Press A when the needle is in the green zone to do a pull-up; B to rest your arms.</span></p>
+        </figcaption>
+      </figure>
+      <figure class="game">
+        <button class="shot" type="button" data-full="img/banderas.webp"><img src="img/banderas.webp" alt="Banderas en la playa" loading="lazy" width="1280" height="720"></button>
+        <figcaption>
+          <h3><span class="es">Banderas en la playa</span><span class="en">Beach flags</span></h3>
+          <p><span class="es">Machaca A para correr y coge una bandera antes que nadie.</span><span class="en">Mash A to run and grab a flag before anyone else.</span></p>
+        </figcaption>
+      </figure>
     </div>
   </section>
+
+  <dialog id="viewer" class="viewer"><img alt=""><button type="button" class="close" aria-label="Cerrar">✕</button></dialog>
 
   <!-- ===== Tele ===== -->
   <section id="tele" class="card-section">

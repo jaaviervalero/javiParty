@@ -39,3 +39,17 @@ for (const btn of document.querySelectorAll("[data-copy]")) {
     } catch (e) {}
   });
 }
+
+// Ver las capturas en grande.
+const viewer = document.getElementById("viewer");
+if (viewer && viewer.showModal) {
+  const img = viewer.querySelector("img");
+  for (const b of document.querySelectorAll(".shot")) {
+    b.addEventListener("click", () => {
+      img.src = b.dataset.full;
+      img.alt = b.querySelector("img").alt;
+      viewer.showModal();
+    });
+  }
+  viewer.addEventListener("click", () => viewer.close());
+}

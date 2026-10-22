@@ -2,7 +2,9 @@ extends Node
 ## Test automático de un minijuego con 4 bots que pulsan al azar:
 ##   tools/smoke.sh <id>        (o: godot3 --headless --path . tests/minigame_smoke.tscn -- <id> [n])
 ## Con ventana y un tercer argumento, guarda una captura a mitad de partida:
-##   godot3 --path . tests/minigame_smoke.tscn -- <id> <n> <captura.png>
+##   godot3 --path . tests/minigame_smoke.tscn -- <id> <n> <captura.png> [segundos]
+## (por defecto a los 4 s de juego; los juegos que los bots acaban antes, como
+## saltarin, necesitan un momento más temprano).
 ## Recorre intro, cuenta atrás, partida y resultados a velocidad x4 y comprueba que
 ## termina con una clasificación válida. Los errores de script los detecta smoke.sh.
 
@@ -12,6 +14,7 @@ const TIMEOUT_MSEC := 90000
 var _game: MinigameBase
 var _start := 0
 var _shot_path := ""
+var _shot_after := -1.0  # segundos de partida; <0 = automático
 
 
 func _ready() -> void:
@@ -28,6 +31,8 @@ func _ready() -> void:
 	var n := 4 if args.size() < 2 else int(args[1])
 	if args.size() > 2:
 		_shot_path = args[2]
+	if args.size() > 3:
+		_shot_after = float(args[3])
 	for i in n:
 		var p := Player.new(i, PlayerManager.COLORS[i], "Bot %d" % (i + 1))
 		p.bot = true
@@ -67,7 +72,7 @@ func _process(_delta: float) -> void:
 		_fail("no terminó en %d s reales (¿falta límite de tiempo o finish()?)" % (TIMEOUT_MSEC / 1000))
 		return
 	if _shot_path != "" and _game.state == MinigameBase.State.PLAYING \
-			and _game.elapsed > min(_game.duration * 0.4, 4.0):
+			and _game.elapsed > (_shot_after if _shot_after >= 0.0 else min(_game.duration * 0.4, 4.0)):
 		var path := _shot_path
 		_shot_path = ""
 		yield(VisualServer, "frame_post_draw")

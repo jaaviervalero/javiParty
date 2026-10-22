@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Captura sin ventana (pantalla virtual Xvfb) para revisar el aspecto visual.
-#   tools/shot.sh <id_minijuego> [jugadores] [salida.png]   -> captura a mitad de partida
+#   tools/shot.sh <id_minijuego> [jugadores] [salida.png] [segundos]   -> captura a mitad de partida
 #   tools/shot.sh select [salida.png]                       -> selector de juego libre
 # Requiere xorg-server-xvfb.
 set -eu
@@ -11,6 +11,6 @@ if [ "${1:?uso: tools/shot.sh <id>|select}" = select ]; then
 	run tests/screenshot.tscn -- res://ui/minigame_select.tscn "$out"
 else
 	out="${3:-/tmp/javiparty_$1.png}"
-	run tests/minigame_smoke.tscn -- "$1" "${2:-4}" "$out"
+	run tests/minigame_smoke.tscn -- "$1" "${2:-4}" "$out" ${4:-}
 fi
 echo "$out"
