@@ -26,6 +26,14 @@ const SPEED_TIME := 5.0
 const SPEED_MULT := 1.7
 const BRUSH_COLOR := Color("8e4ec6")
 const SPEED_COLOR := Color("ffd34d")
+const BOMB_COLOR := Color("e25555")
+
+# Ambiente: patio soleado de baldosas claras con jardín alrededor.
+const PATIO := Color("f6f0e2")
+const PATIO_DARK := Color("ece3d0")
+const GARDEN := Color("9bd774")
+const GARDEN_DARK := Color("77bd55")
+const HEDGE := Color("79c45a")
 
 
 class Ball:
@@ -316,9 +324,59 @@ func _game_end() -> void:
 
 # --- Dibujo ---
 
+## Jardín y base del tablero: se pinta una sola vez (ver MinigameBase._draw_scenery).
+func _draw_scenery(ci: CanvasItem) -> void:
+	# Jardín: solo asoma por los márgenes y las esquinas redondeadas de la arena.
+	var garden := Rect2(0.0, 84.0, 1280.0, 636.0)
+	ci.draw_rect(garden, GARDEN)
+	DrawKit.grass_tufts(ci, Vector2(24.0, 704.0), Vector2(1256.0, 704.0), 26, GARDEN_DARK, 5)
+	# Setos redondos en los bordes, lejos de las esquinas.
+	for i in 11:
+		var hx := 100.0 + i * 110.0
+		ci.draw_circle(Vector2(hx, ARENA.end.y + 12.0), 24.0, HEDGE)
+		ci.draw_circle(Vector2(hx - 12.0, ARENA.end.y + 15.0), 15.0, HEDGE.lightened(0.08))
+	for i in 5:
+		var hy := 170.0 + i * 100.0
+		ci.draw_circle(Vector2(ARENA.position.x - 10.0, hy), 20.0, HEDGE)
+		ci.draw_circle(Vector2(ARENA.end.x + 10.0, hy + 46.0), 20.0, HEDGE)
+	for i in 9:
+		DrawKit.flower(ci, Vector2(90.0 + i * 138.0, ARENA.end.y + 14.0), 4.5,
+				Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
+	DrawKit.arena_frame(ci, ARENA, PATIO, PATIO_DARK)
+	_draw_patio(ci)
+	# Devuelve las esquinas redondeadas al tablero y cierra con el borde blanco.
+	DrawKit.round_corners_mask(ci, ARENA, 30.0, GARDEN)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## Baldosas del patio y rejilla: estático, así que va con el escenario.
+func _draw_patio(ci: CanvasItem) -> void:
+	var o := _grid_origin()
+	var size := Vector2(COLS * CELL, ROWS * CELL)
+	var board := Rect2(o, size)
+	ci.draw_rect(board, PATIO)
+	# Damero muy suave de bloques 2x2 (no se come el color de las casillas pintadas).
+	for by in range(0, ROWS, 2):
+		for bx in range(0, COLS, 2):
+			if (bx + by) % 4 != 0:
+				continue
+			var r := Rect2(o + Vector2(bx * CELL, by * CELL),
+					Vector2(CELL * 2.0, CELL * 2.0)).intersection(board)
+			if r.has_area():
+				ci.draw_rect(r, PATIO_DARK)
+	# Junta sutil en vez de un borde por casilla: menos llamadas de dibujo.
+	var line := Color(0.35, 0.42, 0.48, 0.10)
+	for cx in range(COLS + 1):
+		var x := o.x + cx * CELL
+		ci.draw_line(Vector2(x, o.y), Vector2(x, o.y + size.y), line, 1.0)
+	for cy in range(ROWS + 1):
+		var y := o.y + cy * CELL
+		ci.draw_line(Vector2(o.x, y), Vector2(o.x + size.x, y), line, 1.0)
+	ci.draw_rect(board, WiiTheme.PANEL_BORDER, false, 3.0)
+
+
 func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
-	_draw_floor()
+	_draw_paint()
 	for pu in _powerups:
 		_draw_powerup(pu)
 	for w in _waves:
@@ -332,34 +390,37 @@ func _draw() -> void:
 				Color(c[2], clampf(c[3] * 2.0, 0.0, 1.0)))
 
 
-func _draw_floor() -> void:
+## Solo las casillas pintadas: el resto del patio ya está en el escenario.
+func _draw_paint() -> void:
 	var o := _grid_origin()
-	var empty := Color("eef2f5")
 	for cy in ROWS:
 		for cx in COLS:
 			var owner := _owner[cy * COLS + cx]
-			var col := empty
-			if owner > 0:
-				col = _colors[owner - 1].lightened(0.35)
-			draw_rect(Rect2(o + Vector2(cx * CELL, cy * CELL), Vector2(CELL, CELL)), col)
-	# Rejilla sutil en vez de un borde por casilla: menos llamadas de dibujo.
-	var line := Color(0.35, 0.42, 0.48, 0.10)
-	for cx in range(COLS + 1):
-		var x := o.x + cx * CELL
-		draw_line(Vector2(x, o.y), Vector2(x, o.y + ROWS * CELL), line, 1.0)
-	for cy in range(ROWS + 1):
-		var y := o.y + cy * CELL
-		draw_line(Vector2(o.x, y), Vector2(o.x + COLS * CELL, y), line, 1.0)
-	draw_rect(Rect2(o, Vector2(COLS * CELL, ROWS * CELL)), WiiTheme.PANEL_BORDER, false, 3.0)
+			if owner <= 0:
+				continue
+			draw_rect(Rect2(o + Vector2(cx * CELL, cy * CELL), Vector2(CELL, CELL)),
+					_colors[owner - 1].lightened(0.35))
 
 
 func _draw_powerup(pu: Powerup) -> void:
 	var bob := sin(pu.age * 4.0) * 3.0
 	var c := pu.pos + Vector2(0, bob)
 	var pulse := 1.0 + sin(pu.age * 5.0) * 0.05
-	draw_circle(pu.pos + Vector2(0, 18), POWERUP_RADIUS * 0.85, WiiTheme.SHADOW)
-	draw_circle(c, POWERUP_RADIUS * pulse, Color.WHITE)
-	draw_arc(c, POWERUP_RADIUS * pulse, 0.0, TAU, 32, WiiTheme.ACCENT_DARK, 4.0, true)
+	var r := POWERUP_RADIUS * pulse
+	var kind := BRUSH_COLOR
+	match pu.kind:
+		BOMB:
+			kind = BOMB_COLOR
+		SPEED:
+			kind = SPEED_COLOR
+	DrawKit.soft_shadow(self, pu.pos + Vector2(0, 18.0), r * 1.7)
+	draw_circle(c, r + 5.0, Color(kind, 0.18))
+	draw_circle(c, r, Color.WHITE)
+	draw_circle(c + Vector2(0, r * 0.22), r * 0.78, Color(kind, 0.14))
+	draw_arc(c, r, 0.0, TAU, 32, kind, 3.5, true)
+	# Brillo glossy arriba a la izquierda.
+	DrawKit.ellipse(self, c + Vector2(-r * 0.32, -r * 0.42), Vector2(r * 0.34, r * 0.18),
+			Color(1, 1, 1, 0.65))
 	match pu.kind:
 		BOMB:
 			_draw_icon_bomb(c)
