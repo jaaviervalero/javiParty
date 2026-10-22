@@ -35,6 +35,8 @@ const GAMES := [
 		"title": {"es": "Infla el globo", "en": "Pump it up"}},
 	{"id": "dominadas", "scene": "res://minigames/dominadas/dominadas.tscn",
 		"title": {"es": "Concurso de dominadas", "en": "Pull-up contest"}},
+	{"id": "banderas", "scene": "res://minigames/banderas/banderas.tscn",
+		"title": {"es": "Banderas en la playa", "en": "Beach flags"}},
 ]
 
 
