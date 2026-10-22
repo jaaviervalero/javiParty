@@ -82,7 +82,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action
 
 /* Cruceta: un solo elemento; la dirección sale del ángulo del dedo (con diagonales). */
 .dpad {
-  --s: min(44vmin, 230px);
+  --s: min(56vmin, 300px);
   position: relative; width: var(--s); height: var(--s); touch-action: none;
 }
 .dpad::before, .dpad::after {
@@ -92,11 +92,11 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action
 .dpad::before { left: 33%; right: 33%; top: 0; bottom: 0; }
 .dpad::after { top: 33%; bottom: 33%; left: 0; right: 0; }
 .dpad .hub { position: absolute; inset: 35%; background: var(--panel); z-index: 2; border-radius: 6px; }
-.dpad .arrow { position: absolute; z-index: 3; width: 0; height: 0; border: 12px solid transparent; transition: opacity .05s; opacity: .5; }
-.dpad .arrow.up    { left: 50%; top: 9%;    transform: translateX(-50%); border-bottom: 16px solid var(--text); border-top: 0; }
-.dpad .arrow.down  { left: 50%; bottom: 9%; transform: translateX(-50%); border-top: 16px solid var(--text); border-bottom: 0; }
-.dpad .arrow.left  { top: 50%; left: 9%;    transform: translateY(-50%); border-right: 16px solid var(--text); border-left: 0; }
-.dpad .arrow.right { top: 50%; right: 9%;   transform: translateY(-50%); border-left: 16px solid var(--text); border-right: 0; }
+.dpad .arrow { position: absolute; z-index: 3; width: 0; height: 0; border: 16px solid transparent; transition: opacity .05s; opacity: .5; }
+.dpad .arrow.up    { left: 50%; top: 9%;    transform: translateX(-50%); border-bottom: 22px solid var(--text); border-top: 0; }
+.dpad .arrow.down  { left: 50%; bottom: 9%; transform: translateX(-50%); border-top: 22px solid var(--text); border-bottom: 0; }
+.dpad .arrow.left  { top: 50%; left: 9%;    transform: translateY(-50%); border-right: 22px solid var(--text); border-left: 0; }
+.dpad .arrow.right { top: 50%; right: 9%;   transform: translateY(-50%); border-left: 22px solid var(--text); border-right: 0; }
 .dpad .arrow.on { opacity: 1; border-bottom-color: var(--accent); border-top-color: var(--accent);
   border-left-color: var(--accent); border-right-color: var(--accent); }
 .dpad .arrow.up.on { border-left-color: transparent; border-right-color: transparent; }
@@ -143,6 +143,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action
 /* Vertical: la cruceta/stick arriba y los botones abajo. */
 @media (orientation: portrait) {
   .controls { flex-direction: column; }
-  .dpad, .stick { --s: min(62vw, 34vh, 260px); }
-  .face { --s: min(64vw, 34vh, 270px); }
+  .dpad { --s: min(80vw, 40vh, 340px); }
+  .stick { --s: min(62vw, 34vh, 260px); }
+  .face { --s: min(64vw, 30vh, 270px); }
 }
