@@ -168,6 +168,10 @@ script = ExtResource( 1 )
 ## Rendimiento / renderer
 
 - `GLES2`, sin shaders ni partículas. Lo dibujado por código funciona igual.
+- La clave de proyecto en 3.6 es **`rendering/vram_compression/import_etc`** (sin
+  `textures/`, que es lo de Godot 4). Sin ella el export a Android falla con
+  *"Target platform requires 'ETC' texture compression for GLES2"*. En el preset de
+  Android hacen falta además `texture_format/etc=true` (y `s3tc`/`etc2`).
 - `CanvasItem.draw_string`/`draw_polygon`/`draw_colored_polygon`/`draw_style_box` existen.
 - `draw_string_outline` **no** existe (usa `DrawKit.outlined_text`).
 - El marco de la arena, `DrawKit`, etc. se portan sin cambios salvo lo de esta tabla.
