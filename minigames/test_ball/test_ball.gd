@@ -1,7 +1,7 @@
 extends Node2D
-## Juego de prueba "tonto" para comprobar el mando, solo con botones y el móvil en
-## HORIZONTAL (cruceta a la izquierda): la cruceta mueve la bola, 2 da un impulso,
-## 1 lanza una onda que empuja a los demás y + vuelve al menú.
+## Juego de prueba "tonto" para comprobar el mando, solo con botones (pensado para el
+## mando de javiParty, tools/make_layout.py): stick o cruceta mueven la bola, A da un
+## impulso, B lanza una onda que empuja a los demás y + vuelve al menú.
 ## Recoger estrellas suma puntos. Sin motor de físicas: todo a mano y en un _draw.
 
 const MENU_SCENE := "res://ui/main_menu.tscn"
@@ -70,8 +70,6 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	PlayerManager.ui_navigation_enabled = true
-	for p in PlayerManager.active_players():
-		p.grip = Pad.Grip.VERTICAL
 
 
 func _sync_balls() -> void:
@@ -80,7 +78,6 @@ func _sync_balls() -> void:
 		for b in _balls:
 			if b.player == p:
 				exists = true
-		p.grip = Pad.Grip.HORIZONTAL
 		if not exists:
 			var b := Ball.new()
 			b.player = p
@@ -130,11 +127,12 @@ func _update_ball(b: Ball, delta: float) -> void:
 
 	# La cruceta fija una velocidad objetivo y la bola la alcanza rápido: responde
 	# al instante pero conserva algo de inercia (y los empujones se notan).
-	var target := p.dpad().normalized() * MAX_SPEED
+	# Stick analógico si se está usando; si no, la cruceta.
+	var target := p.stick() * MAX_SPEED if p.stick() != Vector2.ZERO else p.dpad().normalized() * MAX_SPEED
 	b.vel = b.vel.lerp(target, 1.0 - exp(-STEER * delta)) if target != Vector2.ZERO \
 			else b.vel * exp(-STEER * 0.5 * delta)
 
-	if p.just_pressed(Pad.TWO) and b.dash_cd <= 0.0:
+	if p.just_pressed(Pad.A) and b.dash_cd <= 0.0:
 		var dir := p.dpad().normalized()
 		if dir == Vector2.ZERO:
 			dir = b.vel.normalized() if b.vel.length() > 30.0 else Vector2.RIGHT
@@ -143,7 +141,7 @@ func _update_ball(b: Ball, delta: float) -> void:
 		b.squash = 1.35
 		Sfx.play("dash")
 
-	if p.just_pressed(Pad.ONE) and b.wave_cd <= 0.0:
+	if p.just_pressed(Pad.B) and b.wave_cd <= 0.0:
 		b.wave_cd = WAVE_COOLDOWN
 		_wave(b)
 

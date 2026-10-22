@@ -33,9 +33,10 @@ const LAYOUT_DSUCONTROLLER_WIIMOTE := {
 	DSUProtocol.BTN_HOME: HOME,
 }
 
-## Cómo sujeta el jugador el móvil. En HORIZONTAL (cruceta a la izquierda, 1 y 2 a
-## la derecha, como un mando de NES) la cruceta gira 90°: la flecha "arriba" del
-## móvil apunta a la izquierda del jugador.
+## Cómo sujeta el jugador el móvil. Solo importa con el diseño Wiimote de la app
+## tumbado (cruceta a la izquierda, 1 y 2 a la derecha): ahí la cruceta gira 90° y la
+## flecha "arriba" del móvil apunta a la izquierda del jugador. El mando propio de
+## javiParty (tools/make_layout.py) ya es horizontal y va en VERTICAL (sin rotar).
 enum Grip { VERTICAL, HORIZONTAL }
 
 

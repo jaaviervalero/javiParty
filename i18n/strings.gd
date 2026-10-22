@@ -44,8 +44,8 @@ const TEXT := {
 	"BAT_CHARGED": ["cargada", "charged"],
 	"TEST_TITLE": ["Prueba de mando", "Controller test"],
 	"TEST_HELP": [
-		"Móvil en horizontal · Cruceta: mover · 2: impulso · 1: onda · +: salir",
-		"Hold the phone sideways · D-pad: move · 2: dash · 1: shockwave · +: exit"],
+		"Stick o cruceta: mover · A: impulso · B: onda · +: salir",
+		"Stick or D-pad: move · A: dash · B: shockwave · +: exit"],
 	"TEST_NO_PLAYERS": ["Conecta un mando para jugar", "Connect a controller to play"],
 }
 

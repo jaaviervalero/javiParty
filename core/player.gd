@@ -15,6 +15,10 @@ var layout: Dictionary = Pad.LAYOUT_DSUCONTROLLER_WIIMOTE
 ## Sujeción actual: cada minijuego la fija al empezar (ver Pad.Grip).
 var grip := Pad.Grip.VERTICAL
 
+const STICK_DEADZONE := 0.15
+const STICK_PRESS := 0.55
+const STICK_RELEASE := 0.4
+
 ## Botones lógicos del frame actual y del anterior, para just_pressed/just_released.
 var _prev_buttons := 0
 var _cur_buttons := 0
@@ -33,7 +37,32 @@ func is_connected_now() -> bool:
 ## Llamado una vez por frame por PlayerManager.
 func update_buttons() -> void:
 	_prev_buttons = _cur_buttons
-	_cur_buttons = Pad.from_raw(controller.buttons, layout, grip) if is_connected_now() else 0
+	if not is_connected_now():
+		_cur_buttons = 0
+		return
+	_cur_buttons = Pad.from_raw(controller.buttons, layout, grip) | _stick_as_dpad()
+
+
+## Stick analógico con Y hacia ABAJO (convención de Godot). La spec DSU dice que la Y
+## positiva es arriba, pero DSU Controller la manda hacia abajo (medido en iPhone),
+## así que se usa tal cual.
+func stick() -> Vector2:
+	if not is_connected_now():
+		return Vector2.ZERO
+	var v := controller.left_stick
+	return Vector2.ZERO if v.length() < STICK_DEADZONE else v
+
+
+## El stick también cuenta como cruceta (para menús y juegos digitales), con
+## histéresis para que no parpadee cerca del umbral.
+func _stick_as_dpad() -> int:
+	var v := stick()
+	var out := 0
+	for dir in [[Pad.RIGHT, v.x], [Pad.LEFT, -v.x], [Pad.DOWN, v.y], [Pad.UP, -v.y]]:
+		var threshold := STICK_RELEASE if _prev_buttons & dir[0] else STICK_PRESS
+		if dir[1] > threshold:
+			out |= dir[0]
+	return out
 
 
 func buttons() -> int:

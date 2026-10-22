@@ -7,7 +7,8 @@ Uso:
     python3 tools/dsu_simulator.py --auto          # se mueve solo, sin teclado
 
 Teclas (en esta terminal):
-    flechas   D-pad              z / x / c / v   A / B / X / Y
+    flechas   cruceta            z / x / c / v   A / B / 1 / 2
+    - / +     − / +
     w a s d   inclinar           r               enderezar (plano)
     espacio   sacudida           h               HOME (overlay de depuración)
     1-4       elegir mando       q               salir
@@ -31,9 +32,12 @@ SUB_TIMEOUT = 5.0
 PRESS_TIME = 0.15
 SHAKE_TIME = 0.35
 
-KEY_BUTTONS = {  # tecla -> (byte, bit)
+# tecla -> (byte, bit). Mismos bits que el mando de javiParty y el diseño Wiimote de
+# DSU Controller: A = 0x40, B = 0x80, 1 = 0x10, 2 = 0x20, − = SHARE, + = OPTIONS.
+KEY_BUTTONS = {
     "UP": (1, 0x10), "DOWN": (1, 0x40), "LEFT": (1, 0x80), "RIGHT": (1, 0x20),
-    "z": (2, 0x20), "x": (2, 0x40), "c": (2, 0x10), "v": (2, 0x80),
+    "z": (2, 0x40), "x": (2, 0x80), "c": (2, 0x10), "v": (2, 0x20),
+    "-": (1, 0x01), "+": (1, 0x08),
 }
 
 
@@ -56,7 +60,7 @@ class Pad:
             if random.random() < dt * 0.3:
                 self.shake_until = now + SHAKE_TIME
             if random.random() < dt * 0.5:
-                self.pressed[(2, 0x20)] = now + PRESS_TIME
+                self.pressed[(2, 0x40)] = now + PRESS_TIME
         tx, ty = self.tilt
         tz = -math.sqrt(max(0.0, 1.0 - tx * tx - ty * ty))
         ax, ay, az = tx, ty, tz

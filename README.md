@@ -15,10 +15,19 @@ godot --path .                # lanzar el juego
 Controles en PC: flechas + Enter / Esc (igual que el mando de la tele), **F3** = overlay
 de depuración.
 
+## El mando de javiParty
+
+Mando propio para DSU Controller (v3.0.6+), en horizontal: stick, cruceta, A, B, − HOME +.
+Escanea con la app el QR `assets/controller/javiparty_qr.png` (o abre en el móvil el
+enlace de `assets/controller/javiparty_link.txt`). Se regenera con
+`python3 tools/make_layout.py [--size ANCHOxALTO]`.
+
+El diseño Wiimote de la app también funciona (mismos bits para A y B).
+
 ## Conectar un móvil
 
 1. Móvil y PC/tele en **la misma wifi** (no la de invitados).
-2. Abre **DSU Controller**, elige el diseño **Wiimote** y déjala en primer plano.
+2. Abre **DSU Controller** con el mando de javiParty y déjala en primer plano.
 3. La pantalla de inicio busca sola en la red (cada 3 s) y el móvil aparece en una
    tarjeta de jugador. Si no aparece: **Añadir IP a mano** con la IP que muestra la app
    (puerto 26760). Las IPs manuales se recuerdan.
@@ -40,7 +49,7 @@ python3 tools/dsu_simulator.py --auto          # se mueve solo
 ```
 
 Ocupa el puerto 26760 del PC, así que el escáner lo encuentra como un móvil más.
-Nota: el simulador manda los botones como un mando estándar, no como el diseño Wiimote.
+Teclas: flechas = cruceta, z/x = A/B, -/+ , h = HOME (mismos bits que el mando de javiParty).
 
 ## Tests
 
