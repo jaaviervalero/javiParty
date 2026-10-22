@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://minigames/dominadas/dominadas.gd" id="1"]
+
+[node name="Dominadas" type="Node2D"]
+script = ExtResource("1")
