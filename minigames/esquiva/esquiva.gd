@@ -1,13 +1,15 @@
 extends MinigameBase
 ## "Esquiva": vista desde arriba. Stick o cruceta para moverse (rápido y preciso)
-## y A para un escudo breve que rebota proyectiles. De los bordes salen bolas
-## rojas cada vez más rápidas y cada 10 s cruza un barrido con un hueco. Puntos =
-## segundos sobrevividos; los que siguen vivos al final ganan 5 extra.
+## y A para un escudo breve: todo proyectil que toca el escudo pasa a ser tuyo y
+## sale hacia donde apuntas; si le da a otro jugador, tú ganas una vida.
+## De los bordes salen bolas rojas cada vez más rápidas y cada 10 s cruza un
+## barrido con un hueco. Puntos = segundos sobrevividos; los vivos al final, 5 extra.
 
 const BALL_RADIUS := 20.0
 const MOVE_SPEED := 540.0
 const RESPONSE := 22.0
 const LIVES := 3
+const MAX_LIVES := 5
 const INVULN_TIME := 1.5
 const SHIELD_TIME := 0.4
 const SHIELD_COOLDOWN := 4.0
@@ -20,21 +22,17 @@ const SHOT_INTERVAL_GAIN := 0.02
 const AIM_CHANCE := 0.3
 const AIM_MIN_TIME := 8.0
 const TRAIL_MAX := 7
+const BOUNCE_SPEEDUP := 1.15    # el proyectil devuelto sale algo más rápido
+const BOUNCE_MIN_SPEED := 260.0
+const BOUNCE_MAX_SPEED := 900.0
+const POPUP_TIME := 0.9
+const FLASH_TIME := 0.45
 const SWEEP_PERIOD := 10.0
 const SWEEP_SPEED := 210.0
 const SWEEP_HALF := 14.0
 const SWEEP_GAP := 200.0
 const SURVIVOR_BONUS := 5
 const SHOT_COLOR := Color("e25555")
-
-
-class Shot:
-	var pos := Vector2.ZERO
-	var vel := Vector2.ZERO
-	var radius := 11.0
-	var trail: Array[Vector2] = []
-	var hostile := true
-	var alive := true
 
 
 class Sweep:
@@ -56,9 +54,21 @@ class Dodger:
 	var squash := 1.0
 
 
+class Shot:
+	var pos := Vector2.ZERO
+	var vel := Vector2.ZERO
+	var radius := 11.0
+	var trail: Array[Vector2] = []
+	## null = bola de la arena; si no, el proyectil es de ese jugador.
+	var owner: Dodger = null
+	var alive := true
+
+
 var _dodgers: Array[Dodger] = []
 var _shots: Array[Shot] = []
 var _sweeps: Array[Sweep] = []
+var _popups: Array = []   # [pos, t, color]: "+1" al ganar una vida
+var _flashes: Array = []  # [pos, t, color]: destello de la vida ganada
 var _shot_timer := 1.0
 var _next_sweep := SWEEP_PERIOD
 var _sweep_vertical := true
@@ -69,12 +79,13 @@ var _sweep_style: StyleBoxFlat
 
 func _configure() -> void:
 	title = {"es": "Esquiva", "en": "Dodge!"}
-	instructions = {"es": "Muévete con el stick y esquiva las bolas y los barridos; A activa el escudo.",
-		"en": "Move with the stick to dodge balls and sweeps; A raises your shield."}
+	instructions = {
+		"es": "Esquiva todo; con el escudo (A) devuelves proyectiles y si das a otro ganas una vida.",
+		"en": "Dodge everything; your shield (A) deflects projectiles, and hitting another player earns you a life."}
 	controls = [
 		["stick", {"es": "Moverse", "en": "Move"}],
 		["dpad", {"es": "Moverse", "en": "Move"}],
-		[Pad.A, {"es": "Escudo", "en": "Shield"}],
+		[Pad.A, {"es": "Escudo: devuelve y ataca", "en": "Shield: deflect and attack"}],
 	]
 	duration = 60.0
 
@@ -116,6 +127,7 @@ func _game_start() -> void:
 
 func _game_process(delta: float) -> void:
 	_time += delta
+	_update_effects(delta)
 
 	_shot_timer -= delta
 	if _shot_timer <= 0.0:
@@ -272,16 +284,18 @@ func _collide_dodger(d: Dodger) -> void:
 	if d.eliminated:
 		return
 	for s in _shots:
-		if not s.alive or not s.hostile:
-			continue
+		if not s.alive or s.owner == d:
+			continue  # un proyectil propio no te hace nada
 		if d.pos.distance_to(s.pos) >= BALL_RADIUS + s.radius:
 			continue
 		if d.shield > 0.0:
-			_bounce_shot(d, s)
+			_capture_shot(d, s)
 		elif d.invuln > 0.0:
 			s.alive = false
 		else:
 			s.alive = false
+			if s.owner != null:
+				_award_life(s.owner)
 			_hit_dodger(d)
 			break
 	for sweep in _sweeps:
@@ -290,15 +304,39 @@ func _collide_dodger(d: Dodger) -> void:
 			break
 
 
-func _bounce_shot(d: Dodger, s: Shot) -> void:
-	var n := s.pos - d.pos
-	if n.length() < 0.01:
-		n = Vector2.RIGHT
-	n = n.normalized()
-	s.pos = d.pos + n * (BALL_RADIUS + s.radius + 2.0)
-	s.vel = n * maxf(s.vel.length(), 230.0)
-	s.hostile = false
+func _capture_shot(d: Dodger, s: Shot) -> void:
+	# El escudo se queda con el proyectil: pasa a ser suyo y sale hacia donde apunta.
+	var p := d.player
+	var dir := p.stick() if p.stick() != Vector2.ZERO else p.dpad().normalized()
+	if dir == Vector2.ZERO:
+		dir = -s.vel.normalized() if s.vel.length() > 0.01 else (s.pos - d.pos).normalized()
+	dir = dir.normalized()
+	s.owner = d
+	s.pos = d.pos + dir * (BALL_RADIUS + s.radius + 2.0)
+	var speed := clampf(s.vel.length() * BOUNCE_SPEEDUP, BOUNCE_MIN_SPEED, BOUNCE_MAX_SPEED)
+	s.vel = dir * speed
+	s.trail.clear()
 	Sfx.play("pop", randf_range(1.1, 1.3))
+
+
+func _award_life(owner: Dodger) -> void:
+	# Los eliminados no reviven y con el máximo de vidas ya no se gana más.
+	if owner.eliminated or owner.lives >= MAX_LIVES:
+		return
+	owner.lives += 1
+	owner.squash = 1.3
+	_popups.append([owner.pos, 0.0, owner.player.color])
+	_flashes.append([owner.pos, 0.0, owner.player.color])
+	Sfx.play("star")
+
+
+func _update_effects(delta: float) -> void:
+	for popup in _popups:
+		popup[1] += delta
+	_popups = _popups.filter(func(popup): return popup[1] < POPUP_TIME)
+	for flash in _flashes:
+		flash[1] += delta
+	_flashes = _flashes.filter(func(flash): return flash[1] < FLASH_TIME)
 
 
 func _sweep_hits(d: Dodger, sweep: Sweep) -> bool:
@@ -338,6 +376,10 @@ func _draw() -> void:
 		_draw_shot(s)
 	for d in _dodgers:
 		_draw_dodger(d)
+	for flash in _flashes:
+		_draw_flash(flash)
+	for popup in _popups:
+		_draw_popup(popup)
 
 
 func _draw_grid() -> void:
@@ -355,16 +397,31 @@ func _draw_grid() -> void:
 
 
 func _draw_shot(s: Shot) -> void:
+	var col := SHOT_COLOR if s.owner == null else s.owner.player.color
 	if s.trail.size() >= 2:
 		var pts := PackedVector2Array()
 		for point in s.trail:
 			pts.append(point)
-		draw_polyline(pts, Color(SHOT_COLOR, 0.22), s.radius * 1.3, true)
+		draw_polyline(pts, Color(col, 0.22), s.radius * 1.3, true)
 	var glow := s.radius + 3.0 + sin(_time * 8.0) * 1.5
-	draw_circle(s.pos, glow, Color(SHOT_COLOR, 0.18))
-	draw_circle(s.pos, s.radius, SHOT_COLOR)
+	draw_circle(s.pos, glow, Color(col, 0.18))
+	draw_circle(s.pos, s.radius, col)
 	draw_circle(s.pos + Vector2(-s.radius * 0.3, -s.radius * 0.3), s.radius * 0.4,
 			Color(1, 1, 1, 0.45))
+
+
+func _draw_flash(flash: Array) -> void:
+	var t: float = flash[1] / FLASH_TIME
+	var col: Color = flash[2]
+	draw_circle(flash[0], BALL_RADIUS + 8.0 + t * 40.0, Color(col, 0.3 * (1.0 - t)))
+	draw_arc(flash[0], BALL_RADIUS + 8.0 + t * 60.0, 0.0, TAU, 32,
+			Color(col, 0.9 * (1.0 - t)), 4.0 * (1.0 - t) + 1.0, true)
+
+
+func _draw_popup(popup: Array) -> void:
+	var t: float = popup[1] / POPUP_TIME
+	var at: Vector2 = popup[0] + Vector2(0, -BALL_RADIUS - 26.0 - t * 46.0)
+	draw_text_centered("+1", at, 30, Color(popup[2], 1.0 - t))
 
 
 func _draw_sweep(sweep: Sweep) -> void:
@@ -424,6 +481,8 @@ func _draw_dodger(d: Dodger) -> void:
 				Color(WiiTheme.ACCENT, 0.35), 3.0, true)
 
 	var hearts_y := maxf(d.pos.y - BALL_RADIUS - 20.0, ARENA.position.y + 12.0)
-	for i in LIVES:
+	var pips := maxi(LIVES, d.lives)  # se dibujan tantas como vidas tenga, hasta 5
+	var start_x := d.pos.x - (pips - 1) * 7.0
+	for i in pips:
 		var pip := d.player.color if i < d.lives else Color("d7dee4")
-		draw_circle(Vector2(d.pos.x - 14.0 + i * 14.0, hearts_y), 5.0, pip)
+		draw_circle(Vector2(start_x + i * 14.0, hearts_y), 5.0, pip)
