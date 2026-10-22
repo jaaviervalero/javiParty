@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://minigames/tanques/tanques.gd" id="1"]
+
+[node name="Tanques" type="Node2D"]
+script = ExtResource("1")
