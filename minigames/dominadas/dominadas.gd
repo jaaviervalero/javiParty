@@ -47,6 +47,13 @@ const ZONE_COLOR := Color("4cbf6b")
 const DANGER_COLOR := Color("e25555")
 const METAL := Color("b6c2ca")
 const METAL_DARK := Color("7f8c96")
+# Ambiente: gimnasio al aire libre, luminoso y pastel.
+const SKY := Color("e3f4fc")
+const HILL_FAR := Color("bfe0b3")
+const HILL_NEAR := Color("add5a1")
+const GRASS_GROUND := Color("d5ecc6")
+const GRASS_EDGE := Color("bfe0ae")
+const GRASS_TUFT := Color("94c287")
 
 
 ## Estado de cada jugador: una clase interna simple, sin nodos.
@@ -246,11 +253,41 @@ func _update_effects(delta: float) -> void:
 
 # --- Dibujo ---
 
-func _draw() -> void:
-	draw_style_box(WiiTheme.panel_style(30), ARENA)
-	_draw_gym()
+## Decorado estático: gimnasio al aire libre, pintado una sola vez.
+func _draw_scenery(ci: CanvasItem) -> void:
+	var clip := DrawKit.rounded_rect_points(ARENA, 30)
+	DrawKit.arena_frame(ci, ARENA, SKY, SKY)
+	DrawKit.sun(ci, Vector2(ARENA.end.x - 118.0, ARENA.position.y + 92.0), 32.0)
+	# Colinas al fondo; el césped tapa su parte baja.
+	DrawKit.hills(ci, ARENA, GROUND_Y + 20.0, 55.0, HILL_FAR, 1.1, 1.5, clip)
+	DrawKit.hills(ci, ARENA, GROUND_Y + 42.0, 28.0, HILL_NEAR, 2.8, 1.7, clip)
+	# Césped y borde, recortados a las esquinas redondeadas de la arena.
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(ARENA.position.x, GROUND_Y), Vector2(ARENA.end.x, GROUND_Y),
+		ARENA.end, Vector2(ARENA.position.x, ARENA.end.y)]), clip, GRASS_GROUND)
+	DrawKit.clipped_polygon(ci, PackedVector2Array([
+		Vector2(ARENA.position.x, GROUND_Y), Vector2(ARENA.end.x, GROUND_Y),
+		Vector2(ARENA.end.x, GROUND_Y + 9.0), Vector2(ARENA.position.x, GROUND_Y + 9.0)]),
+		clip, GRASS_EDGE)
+	DrawKit.grass_tufts(ci, Vector2(ARENA.position.x + 50.0, GROUND_Y + 118.0),
+			Vector2(ARENA.end.x - 50.0, GROUND_Y + 118.0), 26, GRASS_TUFT, 5)
+	for i in 8:
+		DrawKit.flower(ci, Vector2(ARENA.position.x + 96.0 + i * 148.0,
+				GROUND_Y + 152.0 + float(i % 3) * 10.0), 5.0,
+				Color.WHITE if i % 2 == 0 else Color("ffd1e3"))
 	for l in _lifters:
-		_draw_stand(l)
+		_draw_stand(ci, l)
+	DrawKit.arena_border(ci, ARENA)
+
+
+## MinigameBase llama a queue_redraw() cada frame: aquí solo lo que se mueve.
+func _draw() -> void:
+	# Nubes que derivan despacio.
+	for i in 3:
+		var c := Vector2(ARENA.position.x + 150.0 + i * 380.0 + sin(_time * 0.35 + i * 1.7) * 12.0,
+				ARENA.position.y + 52.0 + float(i % 2) * 34.0)
+		DrawKit.cloud(self, c, 0.9 + float(i % 2) * 0.2, Color(1.0, 1.0, 1.0, 0.9))
+	for l in _lifters:
 		_draw_force_bar(l)
 		_draw_grip_meter(l)
 	for s in _sparks:
@@ -259,68 +296,34 @@ func _draw() -> void:
 		_draw_lifter(l)
 
 
-func _draw_gym() -> void:
-	var inner := ARENA.grow(-10.0)
-	draw_rect(Rect2(inner.position, Vector2(inner.size.x, GROUND_Y - inner.position.y)),
-			Color("e3f4fc"))
-	# Sol.
-	var sun := Vector2(inner.end.x - 96.0, inner.position.y + 74.0)
-	draw_circle(sun, 44.0, Color("fff3c9"))
-	draw_circle(sun, 32.0, Color("ffe9a0"))
-	# Nubes que pasan despacio.
-	for i in 3:
-		var cx := inner.position.x + 150.0 + i * 380.0 + sin(_time * 0.35 + i * 1.7) * 12.0
-		var cy := inner.position.y + 52.0 + float(i % 2) * 34.0
-		_draw_cloud(Vector2(cx, cy))
-	# Colinas al fondo.
-	draw_circle(Vector2(inner.position.x + 260.0, GROUND_Y + 54.0), 170.0, Color("bfe0b3"))
-	draw_circle(Vector2(inner.position.x + 900.0, GROUND_Y + 64.0), 210.0, Color("add5a1"))
-	# Césped.
-	draw_rect(Rect2(inner.position.x, GROUND_Y, inner.size.x, inner.end.y - GROUND_Y),
-			Color("d5ecc6"))
-	draw_rect(Rect2(inner.position.x, GROUND_Y, inner.size.x, 8.0), Color("bfe0ae"))
-	for i in 14:
-		var gx := inner.position.x + 40.0 + i * (inner.size.x - 80.0) / 13.0
-		var gy := GROUND_Y + 96.0 + float(i % 3) * 26.0
-		draw_line(Vector2(gx, gy), Vector2(gx - 4.0, gy - 10.0), Color("94c287"), 3.0)
-		draw_line(Vector2(gx, gy), Vector2(gx + 5.0, gy - 8.0), Color("94c287"), 3.0)
-
-
-func _draw_cloud(c: Vector2) -> void:
-	var col := Color(1.0, 1.0, 1.0, 0.9)
-	draw_rect(Rect2(c + Vector2(-20.0, 2.0), Vector2(42.0, 18.0)), col)
-	draw_circle(c + Vector2(-18.0, 4.0), 16.0, col)
-	draw_circle(c, 22.0, col)
-	draw_circle(c + Vector2(22.0, 5.0), 15.0, col)
-
-
-func _draw_stand(l: Lifter) -> void:
+## Soporte de cada jugador: colchoneta, postes y barra. No se mueve nunca.
+func _draw_stand(ci: CanvasItem, l: Lifter) -> void:
 	# Colchoneta del color del jugador.
 	var mat := Rect2(l.x - 100.0, GROUND_Y + 44.0, 200.0, 54.0)
 	var ms := WiiTheme.panel_style(18, Color(l.player.color, 0.45), Color(l.player.color, 0.13))
 	ms.set_border_width_all(0)
 	ms.shadow_size = 0
-	draw_style_box(ms, mat)
+	ci.draw_style_box(ms, mat)
 	# Postes.
 	for side in [-1.0, 1.0]:
 		var px: float = l.x + side * POST_OFFSET
-		draw_line(Vector2(px + 3.0, GROUND_Y + 2.0), Vector2(px + 3.0, BAR_Y + 2.0),
+		ci.draw_line(Vector2(px + 3.0, GROUND_Y + 2.0), Vector2(px + 3.0, BAR_Y + 2.0),
 				Color(WiiTheme.SHADOW, 0.35), 13.0, true)
-		draw_line(Vector2(px, GROUND_Y), Vector2(px, BAR_Y), METAL, 13.0, true)
-		draw_line(Vector2(px - 3.0, GROUND_Y - 2.0), Vector2(px - 3.0, BAR_Y + 4.0),
+		ci.draw_line(Vector2(px, GROUND_Y), Vector2(px, BAR_Y), METAL, 13.0, true)
+		ci.draw_line(Vector2(px - 3.0, GROUND_Y - 2.0), Vector2(px - 3.0, BAR_Y + 4.0),
 				Color(1.0, 1.0, 1.0, 0.4), 4.0, true)
-		draw_circle(Vector2(px, BAR_Y), 7.0, METAL)
-		draw_circle(Vector2(px, GROUND_Y), 7.0, METAL.darkened(0.1))
+		ci.draw_circle(Vector2(px, BAR_Y), 7.0, METAL)
+		ci.draw_circle(Vector2(px, GROUND_Y), 7.0, METAL.darkened(0.1))
 	# Barra con remates del color del jugador.
-	draw_line(Vector2(l.x - CROSS_HALF + 2.0, BAR_Y + 4.0),
+	ci.draw_line(Vector2(l.x - CROSS_HALF + 2.0, BAR_Y + 4.0),
 			Vector2(l.x + CROSS_HALF + 2.0, BAR_Y + 4.0), Color(WiiTheme.SHADOW, 0.35), 16.0, true)
-	draw_line(Vector2(l.x - CROSS_HALF, BAR_Y), Vector2(l.x + CROSS_HALF, BAR_Y),
+	ci.draw_line(Vector2(l.x - CROSS_HALF, BAR_Y), Vector2(l.x + CROSS_HALF, BAR_Y),
 			METAL_DARK, 15.0, true)
-	draw_line(Vector2(l.x - CROSS_HALF, BAR_Y - 4.0), Vector2(l.x + CROSS_HALF, BAR_Y - 4.0),
+	ci.draw_line(Vector2(l.x - CROSS_HALF, BAR_Y - 4.0), Vector2(l.x + CROSS_HALF, BAR_Y - 4.0),
 			Color(1.0, 1.0, 1.0, 0.35), 4.0, true)
 	for side in [-1.0, 1.0]:
-		draw_circle(Vector2(l.x + side * CROSS_HALF, BAR_Y), 10.0, l.player.color)
-		draw_circle(Vector2(l.x + side * CROSS_HALF - 2.0, BAR_Y - 3.0), 3.5,
+		ci.draw_circle(Vector2(l.x + side * CROSS_HALF, BAR_Y), 10.0, l.player.color)
+		ci.draw_circle(Vector2(l.x + side * CROSS_HALF - 2.0, BAR_Y - 3.0), 3.5,
 				Color(1.0, 1.0, 1.0, 0.45))
 
 
