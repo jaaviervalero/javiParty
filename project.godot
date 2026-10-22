@@ -95,7 +95,7 @@ _global_script_class_icons={
 config/name="javiParty"
 config/description="Party game de minijuegos para Android TV con móviles como mando (DSU)."
 run/main_scene="res://ui/main_menu.tscn"
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 config/quit_on_go_back=false
 
 [autoload]

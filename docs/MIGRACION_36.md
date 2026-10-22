@@ -11,7 +11,9 @@ cualquier `.gd` o `.tscn`. El ejemplo ya migrado es `core/minigame_base.gd` +
 godot3 --version                     # 3.6.3
 godot3 --headless --path . --editor --quit   # importar (crea .import)
 tools/smoke.sh <id>                 # test de un minijuego (usa godot3)
-godot3 --headless --path . -s tests/run_tests.gd
+godot3 --headless --path . -s tests/run_tests.gd    # DSU, CRC y mandos
+godot3 --headless --path . -s tests/ui_focus.gd     # foco y rejilla del selector
+tools/android.sh --export           # APK (build/javiparty.apk)
 ```
 
 Ojo con dos trampas del modo headless:
@@ -176,6 +178,28 @@ script = ExtResource( 1 )
 - `draw_string_outline` **no** existe (usa `DrawKit.outlined_text`).
 - El marco de la arena, `DrawKit`, etc. se portan sin cambios salvo lo de esta tabla.
 
+## Iconos de lanzador (Android)
+
+Los tres los genera `python3 tools/make_icon.py` (PIL + la Nunito del propio
+proyecto, sin assets de fuera) con el mismo aire que el menú: fondo claro con
+degradado, la onda cian de `WiiBackground` y "javi"/"Party" con los cuatro colores
+de jugador como puntos.
+
+| Fichero | Para qué |
+|---|---|
+| `icon.png` (512) | icono de proyecto y `launcher_icons/main_192x192` |
+| `icon_foreground_432x432.png` | logo suelto y transparente del icono adaptativo |
+| `icon_background_432x432.png` | fondo del icono adaptativo |
+
+En `export_presets.cfg` van las tres claves `launcher_icons/*`: si no, Godot mete
+el icono de serie (el robot) y el fondo azul suyo. Android recorta el adaptativo
+al 66% central, por eso el logo se dibuja al 52% del lienzo.
+
+Godot 3.6 **no** sabe poner el banner de Android TV ni la categoría
+`LEANBACK_LAUNCHER` (son opciones de Godot 4; el preset las acepta y las ignora).
+O sea: se cambia el icono, pero la app no aparece en la fila principal del
+lanzador de la tele, solo en su lista de aplicaciones.
+
 ## Clases globales
 
 `class_name` sigue valiendo (el proyecto debe importarse una vez con el editor headless).
@@ -224,13 +248,41 @@ por eso `tools/smoke.sh` es la prueba de verdad.
 | `StyleBox.set_content_margin_all(n)` | `content_margin_left/right/top/bottom = n` |
 | `BoxContainer.ALIGNMENT_*` | `BoxContainer.ALIGN_CENTER/ALIGN_BEGIN/ALIGN_END` |
 | `Control.clip_contents` | `rect_clip_content` |
-| `Control.z_index` (sí en `Node2D`) | `raise()` / `move_child()` |
+| `Control.z_index` (sí en `Node2D`) | **no existe**: y `raise()` reordena los hijos de un `Container` (ver abajo) |
 | `CanvasItem.texture_filter` y `TEXTURE_FILTER_*` | filtro en el `.import` (`flags/filter=false`) |
 | `Tween.transition_type/ease_type` (propiedades) | van como argumentos de `interpolate_property(...)` |
 | `Tween.stop()` | `stop_all()` |
 | `draw_set_transform(pos)` con 1 argumento | `draw_set_transform(pos, 0.0, Vector2.ONE)` |
 | `Geometry2D.intersect_polygons()` | `Geometry.intersect_polygons_2d()` |
 | `draw_string(..., size, ...)` | tamaño dentro de la fuente (`Fonts.get_font`) |
+| `GridContainer` `h_separation`/`v_separation` | `hseparation`/`vseparation` (¡sin guion!) |
+| `LineEdit` señal `text_submitted` | `text_entered` |
+
+### Trampas que fallan EN SILENCIO
+
+Lo peor de la migración no son los errores, son las cosas que se aceptan y no
+hacen nada. Comprobado en este proyecto:
+
+- **Constantes de tema con el nombre de Godot 4**: `grid.add_constant_override("h_separation", 22)`
+  no da error y no hace nada: la rejilla se queda con los 4 px de serie, las
+  tarjetas salen pegadas y la tarjeta ampliada del foco pisa a las vecinas. En
+  3.6 es `hseparation`/`vseparation`. (En `BoxContainer` sí es `separation`.)
+- **`Control` no tiene `z_index`**: `raise()` parece el sustituto, pero mueve el
+  nodo al final de los hijos de su padre. Dentro de un `GridContainer` eso
+  **recoloca la rejilla entera**: la tarjeta enfocada se iba a la última celda y
+  el foco se saltaba tarjetas al ir a la derecha (1 → 3). Antes de subir un nodo,
+  mira si de verdad hace falta: con la separación correcta, la tarjeta ampliada
+  cabe en su hueco y no hay que subir nada.
+- **Nombres de señal**: `text_submitted` (Godot 4) → `text_entered`. Solo salta
+  al ejecutar esa rama, así que los tests headless no lo ven: hay que probar en
+  la tele.
+- Un `-s <script>` **no ve los autoloads al parsear** (`Settings` no está
+  declarado en ese script). Desde un test, `root.get_node("Settings")`.
+
+Regla práctica: los errores de tipo y de método salen solos; para lo demás,
+`tools/smoke.sh`, `tests/ui_focus.gd` y sobre todo **ejecutar en la tele con
+`adb logcat -s godot:V`**.
+
 
 ## Prohibido en minijuegos
 

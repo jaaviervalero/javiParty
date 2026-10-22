@@ -42,8 +42,8 @@ func _ready() -> void:
 	# --- Rejilla de canales ---
 	var scroll := ScrollContainer.new()
 	scroll.set_anchors_and_margins_preset(Control.PRESET_WIDE)
-	scroll.margin_left = 56
-	scroll.margin_right = -56
+	scroll.margin_left = 40
+	scroll.margin_right = -40
 	scroll.margin_top = 100
 	scroll.margin_bottom = -150
 	scroll.scroll_horizontal_enabled = false
@@ -60,8 +60,11 @@ func _ready() -> void:
 	var grid := GridContainer.new()
 	grid.columns = COLUMNS
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	grid.add_constant_override("h_separation", 22)
-	grid.add_constant_override("v_separation", 22)
+	# En 3.6 las constantes de GridContainer son "hseparation"/"vseparation": con
+	# los nombres de Godot 4 ("h_separation") el override se ignora en silencio y
+	# las tarjetas quedan a 4 px, pegadas.
+	grid.add_constant_override("hseparation", 18)
+	grid.add_constant_override("vseparation", 18)
 	margin.add_child(grid)
 	var focus_card: Button = null
 	for g in MinigameRegistry.GAMES:

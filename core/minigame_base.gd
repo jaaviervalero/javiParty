@@ -231,8 +231,8 @@ func _enter_intro() -> void:
 	box.add_child(_label(loc(instructions), 24, WiiTheme.TEXT_SOFT, 600, true))
 	var grid := GridContainer.new()
 	grid.columns = 2
-	grid.add_constant_override("h_separation", 18)
-	grid.add_constant_override("v_separation", 10)
+	grid.add_constant_override("hseparation", 18)
+	grid.add_constant_override("vseparation", 10)
 	for c in controls:
 		grid.add_child(_control_pill(c[0]))
 		grid.add_child(_label(loc(c[1]), 22, WiiTheme.TEXT, 600))

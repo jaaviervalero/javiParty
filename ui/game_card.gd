@@ -54,8 +54,11 @@ func _ready() -> void:
 
 
 func _on_focus(on: bool) -> void:
-	if on:
-		raise()
+	# Aquí NO se puede subir la tarjeta por encima de sus hermanas: en 3.6 Control
+	# no tiene z_index, y raise() reordena los hijos del GridContainer, con lo que
+	# la tarjeta enfocada se iba a la última celda y la rejilla entera se movía.
+	# No hace falta: con FOCUS_SCALE y el halo de 5 px la tarjeta ampliada cabe de
+	# sobra en los 22 px de separación de la rejilla, así que no la tapa nadie.
 	if _tween != null and is_instance_valid(_tween):
 		_tween.stop_all()
 		_tween.queue_free()

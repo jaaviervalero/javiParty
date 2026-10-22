@@ -168,7 +168,8 @@ func _build_ip_dialog() -> void:
 	_ip_edit = LineEdit.new()
 	_ip_edit.placeholder_text = "192.168.1.50"
 	_ip_edit.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER_DECIMAL
-	_ip_edit.connect("text_submitted", self, "_on_ip_submitted")
+	# En 3.6 la señal se llama "text_entered" (no "text_submitted", que es la de 4).
+	_ip_edit.connect("text_entered", self, "_on_ip_submitted")
 	box.add_child(_ip_edit)
 	_ip_error = Label.new()
 	_ip_error.add_color_override("font_color", Color("d9534f"))
