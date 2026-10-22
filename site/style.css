@@ -185,6 +185,7 @@ section { scroll-margin-top: 80px; }
 }
 .code-box strong { font-size: 36px; font-weight: 900; letter-spacing: 3px; color: #c46a12; }
 .small-note { font-size: 15px; color: var(--soft); }
+.small-note.or { margin: 10px 0 0; }
 
 .mock.smartscreen {
   display: grid; gap: 4px; margin: 10px 0; padding: 14px 16px; border-radius: 10px;

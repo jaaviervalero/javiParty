@@ -2,7 +2,7 @@
 "use strict";
 
 // Código corto de la app Downloader (go.aftvnews.com). Vacío = solo se enseña la URL.
-const DOWNLOADER_CODE = "";
+const DOWNLOADER_CODE = "6071356";  // -> releases/latest/download/javiParty-androidtv.apk
 
 const html = document.documentElement;
 const langBtn = document.getElementById("lang");
