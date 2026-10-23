@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>javiParty · Prueba WebRTC</title>
+<style>
+  :root { --bg: #fbfcfd; --panel: #fff; --text: #5b6670; --soft: #8a96a1; --accent: #33b5e5; --border: #d3dde6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; background: var(--bg); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 10px 0; }
+  .status { font-weight: 700; color: var(--accent); }
+  .box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+  #peers { display: flex; flex-direction: column; gap: 6px; }
+  .peer { display: flex; gap: 8px; align-items: center; }
+  button { font: inherit; padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--panel); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  #log { height: 60vh; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
+  .muted { color: var(--soft); }
+  label { user-select: none; }
+</style>
+</head>
+<body>
+<h1>javiParty · Prueba WebRTC</h1>
+<p class="muted">Host de mentira: une la sala, enseña los eventos de <code>jpNet.poll()</code> y contesta
+  <code>welcome</code> a los <code>hello</code>. Sala: <b id="roomName">…</b>.
+  En otra pestaña: <code>../controller/index.html#<span id="roomLink">…</span></code></p>
+
+<div class="row">
+  <span>Estado: <span id="status" class="status">…</span></span>
+  <label><input id="auto" type="checkbox" checked> contestar welcome automáticamente</label>
+  <button id="pingBtn">mandar ping a todos</button>
+</div>
+
+<div class="box">
+  <div class="row" style="margin-top:0"><b>Peers</b></div>
+  <div id="peers" class="muted">(ninguno todavía)</div>
+</div>
+
+<div class="row"><b>Eventos de poll()</b><span id="count" class="muted"></span></div>
+<pre id="log" class="box"></pre>
+
+<script type="module">
+import "./net.js";
+
+const $ = (id) => document.getElementById(id);
+const COLORS = ["#2fa8e0", "#ec5a5a", "#4cbf6b", "#f2a33a"];
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+function roomFromUrl() {
+  const q = new URLSearchParams(location.search).get("room");
+  const raw = String(q || location.hash.replace(/^#/, "") || "TEST").trim().toUpperCase();
+  const clean = raw.split("").filter((c) => ALPHABET.includes(c)).join("");
+  return clean.length === 4 ? clean : "TEST";
+}
+
+const room = roomFromUrl();
+$("roomName").textContent = room;
+$("roomLink").textContent = room;
+
+const players = new Map();   // peer -> número de jugador
+let nextPlayer = 1;
+let events = 0;
+let lastText = "";
+
+function log(line) {
+  const t = new Date().toLocaleTimeString();
+  lastText += "[" + t + "] " + line + "\n";
+  if (lastText.length > 60000) lastText = lastText.slice(-40000);
+  $("log").textContent = lastText;
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+function send(peer, msg) {
+  const ok = window.jpNet.send(peer, JSON.stringify(msg));
+  log("-> #" + peer + " " + JSON.stringify(msg) + (ok ? "" : "  (no se pudo enviar)"));
+  return ok;
+}
+
+function welcome(peer) {
+  let n = players.get(peer);
+  if (!n) { n = nextPlayer++; players.set(peer, n); }
+  send(peer, { t: "welcome", player: n, color: COLORS[(n - 1) % COLORS.length] });
+  send(peer, { t: "layout", controls: [["dpad", ""], ["A", ""], ["B", ""]] });
+  renderPeers();
+}
+
+function renderPeers() {
+  const all = window.__jp.peers;  // { peer: { last: {b,x,y,n}, n } }
+  const ids = Object.keys(all).map(Number);
+  if (!ids.length) { $("peers").textContent = "(ninguno todavía)"; return; }
+  $("peers").textContent = "";
+  for (const peer of ids) {
+    const row = document.createElement("div");
+    row.className = "peer";
+    const p = all[peer];
+    const label = document.createElement("span");
+    label.textContent = "#" + peer + (players.has(peer) ? " (jugador " + players.get(peer) + ")" : "") +
+      (p.last ? "  b=" + p.last.b + " x=" + p.last.x + " y=" + p.last.y + " n=" + p.last.n : "");
+    const w = document.createElement("button");
+    w.textContent = "welcome";
+    w.onclick = () => welcome(peer);
+    const c = document.createElement("button");
+    c.textContent = "close";
+    c.onclick = () => { log("close #" + peer); window.jpNet.close(peer); };
+    row.append(label, w, c);
+    $("peers").append(row);
+  }
+}
+
+// Estado visible para las pruebas automáticas (y para depurar a mano).
+window.__jp = { room: room, events: [], peers: {}, status: "" };
+
+function onEvent(ev) {
+  events++;
+  window.__jp.events.push(ev);
+  if (ev.e === "connect") {
+    log("connect peer=" + ev.peer + " ip=" + JSON.stringify(ev.ip));
+    window.__jp.peers[ev.peer] = window.__jp.peers[ev.peer] || { last: null };
+  } else if (ev.e === "disconnect") {
+    log("disconnect peer=" + ev.peer);
+    delete window.__jp.peers[ev.peer];
+    players.delete(ev.peer);
+  } else if (ev.e === "msg") {
+    let msg = null;
+    try { msg = JSON.parse(ev.text); } catch (e) {}
+    log("msg peer=" + ev.peer + " " + ev.text);
+    if (msg && msg.t === "hello") {
+      if ($("auto").checked) welcome(ev.peer);
+    } else if (msg && msg.t === "in") {
+      const p = window.__jp.peers[ev.peer] || (window.__jp.peers[ev.peer] = { last: null });
+      p.last = msg;
+    } else if (msg && msg.t === "pong") {
+      log("  pong n=" + msg.n);
+    }
+  }
+  $("count").textContent = "(" + events + ")";
+  renderPeers();
+}
+
+$("pingBtn").onclick = () => {
+  const ids = Object.keys(window.__jp.peers).map(Number);
+  ids.forEach((peer, i) => send(peer, { t: "ping", n: Date.now() + i }));
+};
+
+// Como el host de verdad: ping cada segundo (el mando lo usa para saber que
+// seguimos aquí). No se registra en el log para no llenarlo.
+let pingN = 0;
+setInterval(() => {
+  const ids = Object.keys(window.__jp.peers).map(Number);
+  if (!ids.length) return;
+  const text = JSON.stringify({ t: "ping", n: ++pingN });
+  for (const peer of ids) window.jpNet.send(peer, text);
+}, 1000);
+
+setInterval(() => {
+  const raw = window.jpNet.poll();
+  let list = [];
+  try { list = JSON.parse(raw); } catch (e) {}
+  for (const ev of list) onEvent(ev);
+  const st = window.jpNet.status();
+  $("status").textContent = st;
+  window.__jp.status = st;
+}, 250);
+
+const started = window.jpNet.start(room);
+log("start(" + room + ") -> " + started);
+</script>
+</body>
+</html>

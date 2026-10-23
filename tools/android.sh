@@ -14,6 +14,7 @@ PKG="com.javiparty.app"
 
 echo "== Exportando $APK"
 mkdir -p build
+touch build/.gdignore  # que Godot no importe lo exportado como recursos
 godot3 --headless --path . --editor --quit >/dev/null 2>&1
 out=$(godot3 --headless --path . --export-debug "Android TV" "$APK" 2>&1) || true
 if [ ! -f "$APK" ] || echo "$out" | grep -qE "ERROR|failed"; then

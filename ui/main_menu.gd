@@ -5,6 +5,7 @@ extends Control
 
 const SELECT_SCENE := "res://ui/minigame_select.tscn"
 const QR_TEXTURE := "res://assets/controller/javiparty_qr.png"
+const Qr := preload("res://ui/qr.gd")
 
 var _cards: Array = []
 var _status: Label
@@ -15,17 +16,30 @@ var _first_btn: Button
 var _ip_dialog: Control
 var _ip_edit: LineEdit
 var _ip_error: Label
-var _qr_dialog: Control
-var _qr_btn: Button
+# Diálogo del mando web: el QR se genera al abrirlo con la URL de WebHub.
+var _web_qr_dialog: Control
+var _web_qr_btn: Button
+var _web_qr_tex: TextureRect
+var _web_qr_img := ImageTexture.new()
+var _web_qr_url: Label
+var _web_qr_steps: Label
+var _web_qr_error: Label
+# Diálogo antiguo del mando DSU: textura fija dentro de la app.
+var _dsu_qr_dialog: Control
+var _dsu_qr_btn: Button
 var _refresh_timer := 0.0
+# En el navegador no hay DSU (UDP) ni IP manual del móvil: esos botones sobran.
+var _html5: bool = OS.has_feature("HTML5")
 
 
 func _ready() -> void:
 	theme = WiiTheme.build()
 	PlayerManager.ui_navigation_enabled = true
-	for ip in Settings.manual_servers:
-		DSUClient.add_server(ip)
-	NetworkScanner.start()
+	if not _html5:
+		for ip in Settings.manual_servers:
+			DSUClient.add_server(ip)
+		NetworkScanner.start()
+	WebHub.start()  # se queda abierto durante las partidas (los móviles siguen conectados)
 	_build()
 	PlayerManager.connect("player_joined", self, "_on_player_event", ["join"])
 	PlayerManager.connect("player_reconnected", self, "_on_player_event", ["join"])
@@ -77,7 +91,7 @@ func _build() -> void:
 	_status = Label.new()
 	_status.align = Label.ALIGN_CENTER
 	_status.autowrap = true
-	_status.rect_min_size = Vector2(0, 56)
+	_status.rect_min_size = Vector2(0, 84)  # hasta tres líneas (aviso + pistas)
 	_status.add_font_override("font", Fonts.get_font(600, 18))
 	root.add_child(_status)
 
@@ -87,10 +101,15 @@ func _build() -> void:
 	root.add_child(buttons)
 	_first_btn = _button(buttons, "BTN_PLAY", "_on_play")
 	_scan_btn = _button(buttons, "BTN_SCAN_ON", "_on_toggle_scan")
-	_qr_btn = _button(buttons, "BTN_QR", "_open_qr_dialog")
-	_button(buttons, "BTN_MANUAL_IP", "_open_ip_dialog")
+	_web_qr_btn = _button(buttons, "BTN_QR", "_open_qr_dialog")
+	_dsu_qr_btn = _button(buttons, "BTN_QR_DSU", "_open_dsu_qr_dialog")
+	var manual_ip_btn := _button(buttons, "BTN_MANUAL_IP", "_open_ip_dialog")
 	_lang_btn = _button(buttons, "BTN_LANGUAGE", "_on_language")
 	_button(buttons, "BTN_DEBUG", "toggle_debug_overlay")
+	if _html5:
+		_scan_btn.visible = false
+		_dsu_qr_btn.visible = false
+		manual_ip_btn.visible = false
 
 	_clock = Label.new()
 	_clock.set_anchors_and_margins_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -105,6 +124,7 @@ func _build() -> void:
 
 	_build_ip_dialog()
 	_build_qr_dialog()
+	_build_dsu_qr_dialog()
 
 
 func _title_label(text: String, color: Color) -> Label:
@@ -187,19 +207,113 @@ func _on_ip_submitted(_text: String) -> void:
 	_on_connect_ip()
 
 
-## Diálogo con el QR del mando de javiParty para escanearlo con DSU Controller.
+## Diálogo "Escanea para jugar": QR generado con la URL del mando web. Se
+## regenera cada vez que se abre porque la IP de la tele puede haber cambiado.
 func _build_qr_dialog() -> void:
-	_qr_dialog = Control.new()
-	_qr_dialog.set_anchors_and_margins_preset(Control.PRESET_WIDE)
-	_qr_dialog.visible = false
-	add_child(_qr_dialog)
+	_web_qr_dialog = Control.new()
+	_web_qr_dialog.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+	_web_qr_dialog.visible = false
+	add_child(_web_qr_dialog)
 	var dim := ColorRect.new()
 	dim.color = Color(0.85, 0.9, 0.94, 0.7)
 	dim.set_anchors_and_margins_preset(Control.PRESET_WIDE)
-	_qr_dialog.add_child(dim)
+	_web_qr_dialog.add_child(dim)
 	var center := CenterContainer.new()
 	center.set_anchors_and_margins_preset(Control.PRESET_WIDE)
-	_qr_dialog.add_child(center)
+	_web_qr_dialog.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var row := HBoxContainer.new()
+	row.add_constant_override("separation", 28)
+	panel.add_child(row)
+
+	# Columna izquierda: el QR, o el aviso si no hay red.
+	var qr_box := VBoxContainer.new()
+	qr_box.alignment = BoxContainer.ALIGN_CENTER
+	qr_box.rect_min_size = Vector2(400, 400)
+	qr_box.add_constant_override("separation", 12)
+	row.add_child(qr_box)
+	_web_qr_tex = TextureRect.new()
+	_web_qr_tex.texture = _web_qr_img
+	_web_qr_tex.expand = true
+	_web_qr_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_web_qr_tex.rect_min_size = Vector2(400, 400)
+	qr_box.add_child(_web_qr_tex)
+	_web_qr_error = Label.new()
+	_web_qr_error.text = "WEB_QR_NO_NETWORK"
+	_web_qr_error.align = Label.ALIGN_CENTER
+	_web_qr_error.autowrap = true
+	_web_qr_error.add_font_override("font", Fonts.get_font(600, 22))
+	_web_qr_error.add_color_override("font_color", Color("d9534f"))
+	_web_qr_error.visible = false
+	qr_box.add_child(_web_qr_error)
+
+	# Columna derecha: título, URL para teclearla a mano y pasos.
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGN_CENTER
+	box.rect_min_size = Vector2(380, 0)
+	box.add_constant_override("separation", 16)
+	row.add_child(box)
+	var title := Label.new()
+	title.text = "WEB_QR_TITLE"
+	title.add_font_override("font", Fonts.get_font(800, 32))
+	box.add_child(title)
+	_web_qr_url = Label.new()
+	_web_qr_url.autowrap = true
+	_web_qr_url.add_font_override("font", Fonts.get_font(700, 28))
+	_web_qr_url.add_color_override("font_color", WiiTheme.ACCENT_DARK)
+	box.add_child(_web_qr_url)
+	_web_qr_steps = Label.new()
+	_web_qr_steps.text = "WEB_QR_STEPS_HTML5" if _html5 else "WEB_QR_STEPS"
+	_web_qr_steps.autowrap = true
+	_web_qr_steps.add_font_override("font", Fonts.get_font(600, 19))
+	_web_qr_steps.add_color_override("font_color", WiiTheme.TEXT_SOFT)
+	box.add_child(_web_qr_steps)
+	var close_row := HBoxContainer.new()
+	box.add_child(close_row)
+	_web_qr_dialog.set_meta("close", _button(close_row, "BTN_CLOSE", "_close_qr_dialog"))
+
+
+func _open_qr_dialog() -> void:
+	var url: String = WebHub.controller_url()
+	var has_url := url != ""
+	_web_qr_tex.visible = has_url
+	_web_qr_error.visible = not has_url
+	_web_qr_url.visible = has_url
+	_web_qr_steps.visible = has_url
+	if has_url:
+		_web_qr_url.text = url
+		var img := Qr.to_image(url, 10, 4)
+		if img != null:
+			_web_qr_img.create_from_image(img)
+			_web_qr_tex.texture = _web_qr_img
+		else:
+			# Texto demasiado largo para un QR (no debería pasar con una URL).
+			_web_qr_tex.visible = false
+			_web_qr_error.visible = true
+	_web_qr_dialog.visible = true
+	var close: Button = _web_qr_dialog.get_meta("close")
+	close.grab_focus()
+
+
+func _close_qr_dialog() -> void:
+	_web_qr_dialog.visible = false
+	_web_qr_btn.grab_focus()
+
+
+## Diálogo con el QR del mando de javiParty para escanearlo con DSU Controller.
+func _build_dsu_qr_dialog() -> void:
+	_dsu_qr_dialog = Control.new()
+	_dsu_qr_dialog.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+	_dsu_qr_dialog.visible = false
+	add_child(_dsu_qr_dialog)
+	var dim := ColorRect.new()
+	dim.color = Color(0.85, 0.9, 0.94, 0.7)
+	dim.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+	_dsu_qr_dialog.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_and_margins_preset(Control.PRESET_WIDE)
+	_dsu_qr_dialog.add_child(center)
 	var panel := PanelContainer.new()
 	center.add_child(panel)
 	var row := HBoxContainer.new()
@@ -228,18 +342,18 @@ func _build_qr_dialog() -> void:
 	box.add_child(steps)
 	var close_row := HBoxContainer.new()
 	box.add_child(close_row)
-	_qr_dialog.set_meta("close", _button(close_row, "BTN_CLOSE", "_close_qr_dialog"))
+	_dsu_qr_dialog.set_meta("close", _button(close_row, "BTN_CLOSE", "_close_dsu_qr_dialog"))
 
 
-func _open_qr_dialog() -> void:
-	_qr_dialog.visible = true
-	var close: Button = _qr_dialog.get_meta("close")
+func _open_dsu_qr_dialog() -> void:
+	_dsu_qr_dialog.visible = true
+	var close: Button = _dsu_qr_dialog.get_meta("close")
 	close.grab_focus()
 
 
-func _close_qr_dialog() -> void:
-	_qr_dialog.visible = false
-	_qr_btn.grab_focus()
+func _close_dsu_qr_dialog() -> void:
+	_dsu_qr_dialog.visible = false
+	_dsu_qr_btn.grab_focus()
 
 
 func _open_ip_dialog() -> void:
@@ -269,9 +383,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		Sfx.play("back")
 		_close_ip_dialog()
 		get_tree().set_input_as_handled()
-	elif event.is_action_pressed("ui_cancel") and _qr_dialog.visible:
+	elif event.is_action_pressed("ui_cancel") and _web_qr_dialog.visible:
 		Sfx.play("back")
 		_close_qr_dialog()
+		get_tree().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel") and _dsu_qr_dialog.visible:
+		Sfx.play("back")
+		_close_dsu_qr_dialog()
 		get_tree().set_input_as_handled()
 
 
@@ -310,13 +428,22 @@ func _process(delta: float) -> void:
 
 
 func _status_text() -> String:
+	if _html5:
+		# En la web no hay búsqueda DSU: solo el recordatorio del mando web.
+		return tr("SCAN_QR_HINT_WEB")
+	var text := ""
 	if not NetworkScanner.active:
-		return tr("SCAN_IDLE")
-	if NetworkScanner.sweeps > 0 and NetworkScanner.subnets.empty():
-		return tr("NO_NETWORK")
-	if NetworkScanner.should_warn():
-		return tr("NOTHING_FOUND")
-	var nets := PoolStringArray()
-	for s in NetworkScanner.subnets:
-		nets.append(s + "x")
-	return tr("SCANNING") % ", ".join(nets) + "\n" + tr("HOW_TO_CONNECT")
+		text = tr("SCAN_IDLE")
+	elif NetworkScanner.sweeps > 0 and NetworkScanner.subnets.empty():
+		text = tr("NO_NETWORK")
+	elif NetworkScanner.should_warn():
+		text = tr("NOTHING_FOUND")
+	else:
+		var nets := PoolStringArray()
+		for s in NetworkScanner.subnets:
+			nets.append(s + "x")
+		text = tr("SCANNING") % ", ".join(nets) + "\n" + tr("HOW_TO_CONNECT")
+	# Sin nadie conectado todavía, se recuerda que el móvil puede ser el mando.
+	if PlayerManager.active_players().empty() and WebHub.is_running():
+		text += "\n" + tr("SCAN_QR_HINT")
+	return text

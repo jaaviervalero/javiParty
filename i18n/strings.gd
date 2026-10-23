@@ -13,15 +13,26 @@ const TEXT := {
 	"STATUS_CONNECTED": ["Conectado", "Connected"],
 	"STATUS_DISCONNECTED": ["Desconectado", "Disconnected"],
 	"BTN_PLAY": ["Jugar", "Play"],
-	"BTN_SCAN_ON": ["Búsqueda: activada", "Search: on"],
-	"BTN_SCAN_OFF": ["Búsqueda: desactivada", "Search: off"],
-	"BTN_QR": ["QR del mando", "Controller QR"],
+	"BTN_SCAN_ON": ["Buscar: sí", "Search: on"],
+	"BTN_SCAN_OFF": ["Buscar: no", "Search: off"],
+	"BTN_QR": ["QR mando web", "Web controller QR"],
+	"BTN_QR_DSU": ["Mando DSU", "DSU controller"],
 	"BTN_CLOSE": ["Cerrar", "Close"],
+	"WEB_QR_TITLE": ["Escanea para jugar", "Scan to play"],
+	"WEB_QR_STEPS": [
+		"1. Conecta el móvil al mismo Wi-Fi que la tele.\n2. Escanea el código con la cámara.\n3. El mando se abre en el navegador.",
+		"1. Connect your phone to the same Wi-Fi as the TV.\n2. Scan the code with the camera.\n3. The controller opens in your browser."],
+	"WEB_QR_STEPS_HTML5": [
+		"1. Escanea el código con la cámara del móvil.\n2. El mando se abre en el navegador.\n3. Mejor en el mismo Wi-Fi; con datos suele funcionar.",
+		"1. Scan the code with your phone's camera.\n2. The controller opens in your browser.\n3. Same Wi-Fi works best; mobile data usually works too."],
+	"WEB_QR_NO_NETWORK": [
+		"Sin red Wi-Fi: conecta la tele a una red",
+		"No Wi-Fi network: connect the TV to a network"],
 	"QR_TITLE": ["El mando de javiParty", "The javiParty controller"],
 	"QR_STEPS": [
 		"1. Instala DSU Controller (v3.0.6 o superior).\n2. En la app, escanea este código para añadir el mando.\n3. Elige el mando de javiParty, ponte en la misma wifi que la tele y deja la app abierta.",
 		"1. Install DSU Controller (v3.0.6 or later).\n2. In the app, scan this code to add the controller.\n3. Pick the javiParty controller, join the TV's Wi-Fi and keep the app open."],
-	"BTN_MANUAL_IP": ["Añadir IP a mano", "Add IP manually"],
+	"BTN_MANUAL_IP": ["IP del móvil", "Phone IP"],
 	"BTN_LANGUAGE": ["Idioma: Español", "Language: English"],
 	"BTN_DEBUG": ["Depuración", "Debug info"],
 	"BTN_CONNECT": ["Conectar", "Connect"],
@@ -31,6 +42,12 @@ const TEXT := {
 	"MANUAL_IP_HINT": ["Mírala en la app DSU del móvil (puerto 26760).", "Check it in the phone's DSU app (port 26760)."],
 	"INVALID_IP": ["IP no válida", "Invalid IP"],
 	"SCANNING": ["Buscando mandos en %s", "Looking for controllers on %s"],
+	"SCAN_QR_HINT": [
+		"También puedes jugar con el móvil: escanea el QR del mando web.",
+		"You can also play with your phone: scan the web controller QR."],
+	"SCAN_QR_HINT_WEB": [
+		"Cada jugador usa su móvil como mando: pulsa «QR mando web» y escanéalo.",
+		"Each player uses their phone as a controller: open «Web controller QR» and scan it."],
 	"SCAN_IDLE": ["Búsqueda automática desactivada", "Automatic search is off"],
 	"NO_NETWORK": ["Sin red local: conecta la tele a la wifi", "No local network: connect the TV to Wi-Fi"],
 	"HOW_TO_CONNECT": [

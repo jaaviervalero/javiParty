@@ -19,6 +19,10 @@ const INTERVAL_SEC := 3.0
 const WARN_AFTER_SEC := 12.0
 const THREAD_TICK_MSEC := 15
 
+## En HTML5 no hay UDP ni hilos: el nodo existe y mantiene la API, pero no
+## arranca ningún hilo ni abre sockets.
+var enabled: bool = not OS.has_feature("HTML5")
+
 var active := false
 var subnets := PoolStringArray()  # prefijos tipo "192.168.1."
 var sweeps := 0
@@ -35,10 +39,12 @@ var _active_time := 0.0
 
 func _ready() -> void:
 	pause_mode = Node.PAUSE_MODE_PROCESS
+	if not enabled:
+		set_process(false)
 
 
 func start() -> void:
-	if active:
+	if not enabled or active:
 		return
 	active = true
 	_active_time = 0.0
@@ -69,7 +75,7 @@ func should_warn() -> bool:
 
 
 func _process(delta: float) -> void:
-	if not active:
+	if not enabled or not active:
 		return
 	_active_time += delta
 	_timer += delta

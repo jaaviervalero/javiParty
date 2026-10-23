@@ -64,6 +64,11 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://i18n/strings.gd"
 }, {
+"base": "Reference",
+"class": "WebPad",
+"language": "GDScript",
+"path": "res://net/web_pad.gd"
+}, {
 "base": "Control",
 "class": "WiiBackground",
 "language": "GDScript",
@@ -86,6 +91,7 @@ _global_script_class_icons={
 "Player": "",
 "PlayerCard": "",
 "Strings": "",
+"WebPad": "",
 "WiiBackground": "",
 "WiiTheme": ""
 }
@@ -105,6 +111,7 @@ Settings="*res://core/settings.gd"
 Sfx="*res://core/sfx.gd"
 DSUClient="*res://net/dsu_client.gd"
 NetworkScanner="*res://net/network_scanner.gd"
+WebHub="*res://net/web_hub.gd"
 PlayerManager="*res://core/player_manager.gd"
 GameFlow="*res://core/game_flow.gd"
 DebugOverlay="*res://ui/debug_overlay.gd"

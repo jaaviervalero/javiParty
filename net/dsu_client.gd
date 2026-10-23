@@ -21,6 +21,10 @@ const TIMEOUT_MSEC := 3000
 ## asumimos que la app del móvil se ha reiniciado (el contador vuelve a 0).
 const RESTART_GAP := 64
 
+## En HTML5 no hay UDP: el nodo existe y mantiene la misma API y señales, pero
+## no abre sockets ni hace nada (lo usan PlayerManager y la interfaz).
+var enabled: bool = not OS.has_feature("HTML5")
+
 var client_id := 0
 var local_port := 0
 var controllers := {}  # key -> DSUController
@@ -37,6 +41,9 @@ var _info_timer := 0.0
 
 func _ready() -> void:
 	pause_mode = Node.PAUSE_MODE_PROCESS
+	if not enabled:
+		set_process(false)
+		return
 	process_priority = -100  # antes que cualquier escena que lea los mandos
 	client_id = randi()
 	_bind()
@@ -63,6 +70,8 @@ func _bind() -> void:
 
 ## Registra un servidor (IP manual o descubierto) y le pide info al momento.
 func add_server(ip: String, port := DSUProtocol.PORT) -> void:
+	if not enabled:
+		return
 	var k := "%s:%d" % [ip, port]
 	if not _servers.has(k):
 		_servers[k] = {"ip": ip, "port": port, "info_sent_usec": 0, "rtt_ms": -1.0}
@@ -70,6 +79,8 @@ func add_server(ip: String, port := DSUProtocol.PORT) -> void:
 
 
 func remove_server(ip: String, port := DSUProtocol.PORT) -> void:
+	if not enabled:
+		return
 	_servers.erase("%s:%d" % [ip, port])
 	for k in controllers.keys():
 		var c: DSUController = controllers[k]
@@ -99,6 +110,8 @@ func connected_controllers() -> Array:
 # --- Bucle ---
 
 func _process(delta: float) -> void:
+	if not enabled:
+		return
 	_poll()
 
 	_keepalive_timer += delta
